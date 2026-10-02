@@ -47,7 +47,7 @@ export const validationUserCreate = [
     .notEmpty()
     .withMessage("Age is required to register")
     .isInt({ min: 18, max: 120 })
-    .withMessage("You must be at least 18 years old to register on Yaro"),
+    .withMessage("You must be at least 18 years old to register on Dark Moon"),
 ];
 
 export const validationUserLogin = [
@@ -85,5 +85,5 @@ export const validationGoogleAuth = [
   body("age")
     .optional()
     .isInt({ min: 18, max: 120 })
-    .withMessage("You must be at least 18 years old to register on Yaro"),
+    .withMessage("You must be at least 18 years old to register on Dark Moon"),
 ];

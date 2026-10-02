@@ -2,14 +2,18 @@ import jwt from "jsonwebtoken";
 import { config } from "../configs/envConfig";
 
 export const generateToken = (userId: string | number, type: "access" | "refresh") => {
-    const fallbackSecret = type === "access" 
+    const isProduction = process.env.NODE_ENV === 'production';
+    const secret = type === "access" ? config.JWT_ACCESS_SECRET : config.JWT_REFRESH_SECRET;
+    if (isProduction && !secret) {
+        throw new Error(`FATAL: JWT_${type.toUpperCase()}_SECRET is missing in production.`);
+    }
+    const effectiveSecret = secret || (type === "access" 
         ? "2a869de490ac2e6f065b63be7c76ffd658af4fbb4feaf3c1ced1cd3959c9cfe2"
-        : "812ade37d6ecfebbde7de546b9603c45a9ebb2ef174554f72a7e6d6c3d079f6a";
-    const secret = (type === "access" ? config.JWT_ACCESS_SECRET : config.JWT_REFRESH_SECRET) || fallbackSecret;
+        : "812ade37d6ecfebbde7de546b9603c45a9ebb2ef174554f72a7e6d6c3d079f6a");
 
     const numericUserId = typeof userId === 'number' ? userId : (parseInt(String(userId), 10) || userId);
     const expiresIn = type === "access" ? "7d" : "30d";
-    return jwt.sign({ userId: numericUserId }, secret, { expiresIn });
+    return jwt.sign({ userId: numericUserId }, effectiveSecret, { expiresIn });
 };
 
 

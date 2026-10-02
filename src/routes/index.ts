@@ -2,7 +2,6 @@ import AuthRoutes from "./authRoutes";
 import UserRoutes from "./userRoutes";
 import hostRoutes from "./hostRoutes";
 import coinsPriceRoutes from "./coinPriceRoutes";
-import callRoutes from "./callRoutes";
 import chatRoutes from "./chatRoutes";
 import frameRoute from "./frameRoutes";
 import avatarRoute from "./avatarRoutes";
@@ -20,7 +19,18 @@ import emsRoutes from "./emsRoutes";
 import recruitmentRoutes from "./recruitmentRoutes";
 import sellerRoutes from "./sellerRoutes";
 import voiceClubRoutes from "./voiceClubRoutes";
-
 import storeRoutes from "./storeRoutes";
+import vipRoutes from "./vipRoutes";
+import fanClubRoutes from "./fanClubRoutes";
+import rankingRoutes from "./rankingRoutes";
+import userTaskRoutes from "./userTaskRoutes";
 
-export { AuthRoutes, UserRoutes, hostRoutes, coinsPriceRoutes, callRoutes, chatRoutes, avatarRoute, frameRoute, adminRoutes, paymentRoutes, kycRoutes, withdrawalRoutes, giftRoutes, helpRoutes, UploadRoutes, notificationRoutes, upiRoutes, publicRoutes, emsRoutes, recruitmentRoutes, sellerRoutes, voiceClubRoutes, storeRoutes };
+export {
+  AuthRoutes, UserRoutes, hostRoutes, coinsPriceRoutes,
+  chatRoutes, avatarRoute, frameRoute, adminRoutes,
+  paymentRoutes, kycRoutes, withdrawalRoutes, giftRoutes,
+  helpRoutes, UploadRoutes, notificationRoutes, upiRoutes,
+  publicRoutes, emsRoutes, recruitmentRoutes, sellerRoutes,
+  voiceClubRoutes, storeRoutes, vipRoutes, fanClubRoutes,
+  rankingRoutes, userTaskRoutes,
+};

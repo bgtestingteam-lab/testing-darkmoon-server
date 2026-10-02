@@ -5,43 +5,15 @@ export const getVoiceClubConfig = async (req: Request, res: Response) => {
     return res.status(200).json({
       success: true,
       data: {
-        appName: 'Yaro',
-        package: 'yaro.vc.app',
+        appName: 'FAHO',
+        package: 'com.darkmoon.app',
         deepLinkScheme: 'voiceclub://',
         version: '2.0.0',
         features: {
-          voiceCallsEnabled: true,
-          videoCallsEnabled: true,
-          giftExchangeEnabled: true,
+          voiceRoomsEnabled: true,
           vipLoungesEnabled: true,
-          instantMatchingEnabled: true,
         },
-        bannerNotice: 'Welcome to Yaro! Connect with vibrant hosts instantly.',
-      },
-    });
-  } catch (error: any) {
-    return res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-export const joinVoiceQueue = async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).user?._id || req.body.userId;
-    const { preferredLanguage, callType } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({ success: false, message: 'User ID is required' });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: 'Successfully queued for Yaro audio lounge match',
-      data: {
-        queueTicketId: `VCQ-${Date.now()}-${userId.toString().slice(-4)}`,
-        status: 'WAITING',
-        estimatedWaitSeconds: 15,
-        preferredLanguage: preferredLanguage || 'English',
-        callType: callType || 'voice',
+        bannerNotice: 'Welcome to FAHO! Connect with vibrant hosts instantly in Voice Party rooms.',
       },
     });
   } catch (error: any) {
@@ -67,15 +39,40 @@ export const getVipRewards = async (req: Request, res: Response) => {
   }
 };
 
+import { AgoraService } from '../services/agora.service';
 import { Room } from '../models/room.model';
 import { User } from '../models/user.model';
 
 export const getAllActiveVoiceRooms = async (req: Request, res: Response) => {
   try {
-    const { category, search, limit = 50 } = req.query;
+    const { category, search, country, limit = 50 } = req.query;
     const filter: any = { isActive: { $ne: false } };
     if (category && category !== 'All' && category !== 'Popular') {
       filter.category = category;
+    }
+    if (typeof country === 'string' && country.trim()) {
+      const trimmedCountry = country.trim();
+      const escapedCountry = trimmedCountry.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+      const countryRegex = new RegExp(`^${escapedCountry}$`, 'i');
+      const isIndia = /^india$/i.test(trimmedCountry) || /^in$/i.test(trimmedCountry);
+
+      const userConditions: any[] = [
+        { 'country.name': countryRegex },
+        { 'country.code': countryRegex },
+        { 'country': countryRegex },
+      ];
+
+      // Default fallback: if filtering for India, also match users with no country set
+      if (isIndia) {
+        userConditions.push(
+          { 'country.name': { $in: ['', null] } },
+          { 'country': { $in: ['', null] } },
+          { country: { $exists: false } }
+        );
+      }
+
+      const owners = await User.find({ $or: userConditions }).select('_id').lean();
+      filter.ownerId = { $in: owners.map(owner => owner._id) };
     }
     if (search) {
       const searchStr = String(search).trim();
@@ -111,7 +108,7 @@ export const getAllActiveVoiceRooms = async (req: Request, res: Response) => {
       ];
     }
     const rooms = await Room.find(filter)
-      .populate('ownerId', 'userId name image avatar gender meethiId')
+      .populate('ownerId', 'userId name image avatar gender meethiId country')
       .sort({ updatedAt: -1 })
       .limit(Number(limit))
       .lean();
@@ -126,6 +123,8 @@ export const getAllActiveVoiceRooms = async (req: Request, res: Response) => {
         about: r.about || '',
         hostName: owner.name || 'Host',
         hostId,
+        country: owner.country?.name || (typeof owner.country === 'string' ? owner.country : '') || (r as any).country || 'India',
+        flag: owner.country?.flag || (r as any).flag || '🇮🇳',
         ownerId: owner._id,
         coverImage: r.coverImage || owner.image || owner.avatar || '',
         onlineCount: r.members?.length ? String(r.members.length) : '1',
@@ -154,7 +153,7 @@ export const getMyVoiceRoom = async (req: any, res: Response) => {
     if (!user) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
     const room = await Room.findOne({ ownerId: user.id || user._id })
-      .populate('ownerId', 'userId name image avatar gender meethiId')
+      .populate('ownerId', 'userId name image avatar gender meethiId country')
       .lean();
 
     if (!room) {
@@ -178,6 +177,8 @@ export const getMyVoiceRoom = async (req: any, res: Response) => {
           about: (room as any).about || '',
           hostName: owner.name || user.name || 'You',
           hostId,
+          country: owner.country?.name || '',
+          flag: owner.country?.flag || '',
           ownerId: owner._id || user.id,
           coverImage: (room as any).coverImage || owner.image || user.image || '',
           onlineCount: '1',
@@ -267,6 +268,42 @@ export const closeVoiceRoom = async (req: any, res: Response) => {
     return res.status(200).json({
       success: true,
       message: 'Room closed',
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const generateVoiceRoomToken = async (req: any, res: Response) => {
+  try {
+    const user = req.user;
+    if (!user) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { roomId, channelName: reqChannel, role = 'publisher' } = req.body || {};
+    const channelName = String(roomId || reqChannel || '').trim();
+
+    if (!channelName) {
+      return res.status(400).json({ success: false, message: 'roomId or channelName is required' });
+    }
+
+    // UID for Agora: numeric user.userId, or hash from Mongo _id
+    let uid = Number(user.userId);
+    if (!uid || isNaN(uid) || uid <= 0) {
+      const idStr = String(user.id || user._id || '10001');
+      uid = Math.abs(idStr.split('').reduce((acc, char) => ((acc << 5) - acc) + char.charCodeAt(0), 0)) % 1000000000 || 100001;
+    }
+
+    const agoraResult = AgoraService.generateRtcToken({
+      channelName,
+      uid,
+      role: role === 'publisher' ? 'publisher' : 'subscriber',
+      expireSeconds: 86400,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Voice token generated successfully',
+      data: agoraResult,
     });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });

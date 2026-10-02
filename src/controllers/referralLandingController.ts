@@ -27,7 +27,7 @@ export const renderReferralLandingPage = async (req: Request, res: Response) => 
       }
     }
 
-    const playStoreUrl = "https://play.google.com/store/apps/details?id=yaro.vc.app&referrer=utm_source%3Dyaroapp%26utm_medium%3Dreferral%26utm_campaign%3Drefer_and_earn";
+    const playStoreUrl = "https://play.google.com/store/apps/details?id=com.darkmoon.app&referrer=utm_source%3Ddarkmoon%26utm_medium%3Dreferral%26utm_campaign%3Drefer_and_earn";
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -40,8 +40,8 @@ export const renderReferralLandingPage = async (req: Request, res: Response) => 
   <!-- OpenGraph / Social Meta Tags -->
   <meta property="og:title" content="Yaro Special Invitation from ${inviterName}">
   <meta property="og:description" content="Use code ${inviterCode} to claim 100 Free Welcome Coins on India's #1 Live Video & Voice Social App.">
-  <meta property="og:image" content="${inviterAvatar || 'https://yaroapp.in/logo.png'}">
-  <meta property="og:url" content="https://yaroapp.in/invite?ref=${inviterCode}">
+  <meta property="og:image" content="${inviterAvatar || 'https://darkmoon.app/logo.png'}">
+  <meta property="og:url" content="https://darkmoon.app/invite?ref=${inviterCode}">
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -351,7 +351,7 @@ export const renderReferralLandingPage = async (req: Request, res: Response) => 
     <div class="badge">✨ Special Invite</div>
 
     <div class="inviter-card">
-      <img src="${inviterAvatar || 'https://yaroapp.in/logo.png'}" alt="Inviter" class="inviter-avatar" onerror="this.src='https://yaroapp.in/logo.png'">
+      <img src="${inviterAvatar || 'https://darkmoon.app/logo.png'}" alt="Inviter" class="inviter-avatar" onerror="this.src='https://darkmoon.app/logo.png'">
       <div class="inviter-info">
         <h4>${inviterName}</h4>
         <p>invited you to join Yaro!</p>

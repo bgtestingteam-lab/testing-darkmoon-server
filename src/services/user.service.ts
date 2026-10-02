@@ -2,7 +2,7 @@ import { User } from "../models/user.model";
 import { cacheService } from "../utils/cache";
 import HostLevel from "../models/hostLevel.model";
 import { CoinsTransaction } from "../models/spentCoinModel";
-import { CallStatus, TransactionType } from "../constants/user";
+import { TransactionType } from "../constants/user";
 import { ClientSession, Types } from "mongoose";
 
 import dayjs from 'dayjs';
@@ -48,8 +48,8 @@ export const recalculateAndUpdateHostLevel = async (
 
     const transactions = await CoinsTransaction.find({
       hostId,
-      type: TransactionType.VOICE_CALL,
-      status: CallStatus.ENDED,
+      type: { $in: [TransactionType.GIFT, TransactionType.GIFT_SENT] },
+      // completed gifts
       createdAt: { $gte: bounds.startOfWeek, $lte: bounds.endOfWeek }
     }).select('duration').session(session || null as any).lean();
 
@@ -61,7 +61,7 @@ export const recalculateAndUpdateHostLevel = async (
     const totalMinutes = Math.floor(totalDurationSeconds / 60);
 
     const now = new Date();
-    const hostUser = await User.findById(hostId).select('level createdAt').session(session || null as any).lean();
+    const hostUser = await User.findById(hostId).select('level createdAt +levelRewardClaims').session(session || null as any).lean();
     if (!hostUser) return 1;
 
     const createdAt = (hostUser as any).createdAt ? new Date((hostUser as any).createdAt) : now;
@@ -100,6 +100,44 @@ export const recalculateAndUpdateHostLevel = async (
         { session: session || null as any }
       );
       console.log(`🎉 Host ${hostId} level updated from ${currentStoredLevel} to ${targetLevel} (promo active: ${isPromoActive})`);
+    }
+
+    // Grant each configured reward once when the host reaches its level.
+    // Expiry is measured from the actual unlock, not from level creation.
+    const existingClaims = new Set((hostUser as any)?.levelRewardClaims || []);
+    for (const config of realLevels) {
+      if (config.level > targetLevel || !Array.isArray(config.rewards)) continue;
+      for (const [index, reward] of config.rewards.entries()) {
+        if (!reward?.name || !['frame', 'entry'].includes(reward.type)) continue;
+        const grantKey = `level:${config.level}:${index}:${reward.name}`;
+        if (existingClaims.has(grantKey)) continue;
+        const grantedAt = new Date();
+        const durationDays = Math.max(0, Number(reward.durationDays) || 0);
+        const expiresAt = durationDays
+          ? new Date(grantedAt.getTime() + durationDays * 24 * 60 * 60 * 1000)
+          : undefined;
+        const grant = await User.findOneAndUpdate(
+          { _id: hostId, levelRewardClaims: { $ne: grantKey } },
+          {
+            $addToSet: { levelRewardClaims: grantKey },
+            $push: {
+              storeInventory: {
+                name: reward.name,
+                category: reward.type === 'frame' ? 'Frames' : 'Entry',
+                source: 'level',
+                grantKey,
+                durationDays,
+                purchasedAt: grantedAt,
+                expiresAt,
+                imageUrl: reward.imageUrl || '',
+                animationUrl: reward.animationUrl || '',
+              },
+            },
+          },
+          { session: session || null as any }
+        );
+        if (grant) existingClaims.add(grantKey);
+      }
     }
 
     return targetLevel;
@@ -309,7 +347,7 @@ export const getAllHostsService = async ({
   }
 
   let fields =
-    "userId name image isOnline audio audioPrice videoPrice language languages hobbies isActive bio country role isVerified faceVerificationStatus kycVerificationStatus";
+    "userId name image isOnline audio language languages hobbies isActive bio country role isVerified faceVerificationStatus kycVerificationStatus";
 
   // Role-based access
   switch (role) {

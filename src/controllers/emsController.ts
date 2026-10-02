@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+﻿import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middlewares/authorize.middleware';
 import { Permission } from '../models/permission.model';
 import { Workflow } from '../models/workflow.model';
@@ -1503,16 +1503,16 @@ export const finalizeUserApproval = async (
 
   // Role-specific login URL auto assignment
   const loginUrlMap: Record<string, string> = {
-    owner: 'owner.yaroapp.in',
-    superAdmin: 'superadmin.yaroapp.in',
-    admin: 'admin.yaroapp.in',
-    agency: 'agency.yaroapp.in',
-    operator: 'operator.yaroapp.in',
-    coinSeller: 'seller.yaroapp.in',
-    customerSupport: 'support.yaroapp.in',
+    owner: 'owner.darkmoon.app',
+    superAdmin: 'superadmin.darkmoon.app',
+    admin: 'admin.darkmoon.app',
+    agency: 'agency.darkmoon.app',
+    operator: 'operator.darkmoon.app',
+    coinSeller: 'seller.darkmoon.app',
+    customerSupport: 'support.darkmoon.app',
     host: 'No Web Login (Mobile App Only)',
   };
-  const loginUrl = loginUrlMap[targetRole] || 'admin.yaroapp.in';
+  const loginUrl = loginUrlMap[targetRole] || 'admin.darkmoon.app';
 
   // Automatically construct parenting tree
   let parentId: any = undefined;
@@ -1576,7 +1576,7 @@ export const finalizeUserApproval = async (
       const existing = await User.findOne({ referralCode });
       if (!existing) isUnique = true;
     }
-    referralLink = `https://apply.yaroapp.in${roleConfig.path}?ref=${referralCode}`;
+    referralLink = `https://apply.darkmoon.app${roleConfig.path}?ref=${referralCode}`;
   }
 
   const audioRecordingUrl = data.audio || data.voiceAudioUrl || data.audioUrl || data.voiceUrl || data.voice || data.introAudio || '';

@@ -1,4 +1,4 @@
-import { Response } from "express";
+﻿import { Response } from "express";
 import { AuthRequest } from "../middlewares/authorize.middleware";
 import cloudinary from "../utils/cloudinary";
 import { config } from "../configs/envConfig";
@@ -100,7 +100,7 @@ export const uploadDirectFile = async (req: AuthRequest, res: Response) => {
       return sendResponse(res, 400, false, "No file uploaded");
     }
 
-    const host = req.get("host") || "api.yaroapp.in";
+    const host = req.get("host") || "api.darkmoon.app";
     const protocol = req.protocol === "https" || req.headers["x-forwarded-proto"] === "https" ? "https" : "http";
     const fileUrl = `${protocol}://${host}/uploads/gifts/${file.filename}`;
 

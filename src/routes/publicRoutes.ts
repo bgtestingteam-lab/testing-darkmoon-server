@@ -19,7 +19,6 @@ router.get('/settings', async (req: Request, res: Response) => {
             termsAndConditions: settings.termsAndConditions,
             coinPrice: settings.coinPrice,
             withdrawalPlatformFeePercent: settings.withdrawalPlatformFeePercent,
-            callRatePerMinute: settings.callRatePerMinute,
         };
         return sendResponse(res, 200, true, 'Settings fetched successfully', publicSettings);
     } catch (error) {
@@ -167,7 +166,7 @@ router.get('/search', async (req: Request, res: Response) => {
         };
 
         const matchingUsers = await User.find(userFilter)
-            .select('userId meethiId name userName image avatar gender level isOnline role isVerified isActive bio languages audioPrice videoPrice')
+            .select('userId meethiId name userName image avatar gender level isOnline role isVerified isActive bio languages')
             .sort({ isOnline: -1, role: 1, createdAt: -1 })
             .limit(limitNum)
             .lean();
@@ -288,14 +287,14 @@ router.post('/delete-account-request', async (req: Request, res: Response) => {
         const user = await User.findOne(query);
         const DeletionRequest = (await import('../models/deletionRequest.model')).default;
         const fullReason = [reason, detailedNotes].filter(Boolean).join(' - ');
-        const generatedTicket = `YARO-DEL-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+        const generatedTicket = `DARKMOON-DEL-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
         if (user) {
             await DeletionRequest.create({
                 userId: user._id,
                 yaroId: String(user.userId || cleanId),
                 meethiId: String(user.meethiId || user.userId || cleanId),
-                name: user.name || 'Yaro User',
+                name: user.name || 'Dark Moon User',
                 role: user.role || userRole || 'user',
                 phoneNumber: user.phoneNumber || cleanId,
                 reason: fullReason || 'Website self-service deletion request',

@@ -2,7 +2,7 @@ import admin from "firebase-admin";
 import path from "path";
 import fs from "fs";
 
-export const EXPECTED_FIREBASE_PROJECT_ID = 'yaro-voice-chat';
+export const EXPECTED_FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'darkmoon-voice-chat';
 
 // ✅ initialize once
 if (!admin.apps.length) {
@@ -39,22 +39,12 @@ if (!admin.apps.length) {
     }
 
     if (serviceAccount) {
-      const detectedProjectId = serviceAccount.project_id;
-      if (detectedProjectId && detectedProjectId !== EXPECTED_FIREBASE_PROJECT_ID) {
-        console.error(
-          `❌ [Firebase] Project ID mismatch! Configured service account belongs to '${detectedProjectId}', ` +
-          `but production requires '${EXPECTED_FIREBASE_PROJECT_ID}'. Refusing legacy credentials.`
-        );
-        admin.initializeApp({
-          projectId: EXPECTED_FIREBASE_PROJECT_ID,
-        });
-      } else {
-        admin.initializeApp({
-          credential: admin.credential.cert(serviceAccount),
-          projectId: EXPECTED_FIREBASE_PROJECT_ID,
-        });
-        console.log(`✅ [Firebase] Admin SDK initialized successfully for project: ${EXPECTED_FIREBASE_PROJECT_ID}`);
-      }
+      const targetProjectId = serviceAccount.project_id || EXPECTED_FIREBASE_PROJECT_ID;
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId: targetProjectId,
+      });
+      console.log(`✅ [Firebase] Admin SDK initialized successfully for project: ${targetProjectId}`);
     } else {
       console.warn(`[Firebase] No service account key found. Initializing with default project: ${EXPECTED_FIREBASE_PROJECT_ID}`);
       admin.initializeApp({

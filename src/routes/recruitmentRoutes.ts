@@ -5,7 +5,9 @@ import {
     getAdminApplications,
     getApplicationById,
     updateApplicationStatus,
-    addReviewNote
+    addReviewNote,
+    getAgencyDashboard,
+    joinAgency,
 } from '../controllers/recruitmentController';
 import { verifyToken } from '../middlewares/authorize.middleware';
 
@@ -39,5 +41,9 @@ router.get('/admin/applications', verifyToken, getAdminApplications);
 router.get('/admin/applications/:id', verifyToken, getApplicationById);
 router.patch('/admin/applications/:id/status', verifyToken, updateApplicationStatus);
 router.post('/admin/applications/:id/notes', verifyToken, addReviewNote);
+
+// Agency Mobile & Web Portal Routes
+router.get('/agency/dashboard', verifyToken, getAgencyDashboard);
+router.post('/agency/join', verifyToken, joinAgency);
 
 export default router;

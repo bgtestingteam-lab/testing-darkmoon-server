@@ -1,4 +1,4 @@
-import { connectDB } from "../utils/db";
+﻿import { connectDB } from "../utils/db";
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -15,9 +15,9 @@ async function run() {
       {
         image: {
           $in: [
-            'https://api.yaroapp.in/uploads/avatars/male_default.webp',
-            'https://api.yaroapp.in/uploads/avatars/female_default.webp',
-            'https://api.yaroapp.in/uploads/avatars/neutral_default.webp',
+            'https://api.darkmoon.app/uploads/avatars/male_default.webp',
+            'https://api.darkmoon.app/uploads/avatars/female_default.webp',
+            'https://api.darkmoon.app/uploads/avatars/neutral_default.webp',
             'https://api.voicecallclub.com/uploads/avatars/male_default.webp',
             'https://api.voicecallclub.com/uploads/avatars/female_default.webp',
             'https://api.voicecallclub.com/uploads/avatars/neutral_default.webp',

@@ -19,9 +19,10 @@ import {
   unblockContact,
   getBlockedContacts,
   getCoinHistory,
-  exchangeCoinsToDiamonds,
   requestDeletion,
   checkUsernameAvailability,
+  getPublicUserProfile,
+  getSelfProfile,
 } from "../controllers/userController";
 
 import { verifyToken } from "../middlewares/authorize.middleware";
@@ -47,9 +48,6 @@ router.post("/set-username", verifyToken, setUserName);
 router.get("/check-username", verifyToken, checkUsernameAvailability);
 
 router.post("/verify-phone", verifyToken, setVerifiedPhone)
-
-router.post("/exchange-coins", verifyToken, exchangeCoinsToDiamonds);
-router.post("/exchange", verifyToken, exchangeCoinsToDiamonds);
 
 // email verification for Authorized User 
 router.post("/verify-email", verifyToken, emailVerification);
@@ -77,6 +75,12 @@ router.get("/blocked-contacts", verifyToken, getBlockedContacts);
 router.post("/block-contact/:id", verifyToken, blockContact);
 router.post("/unblock-contact/:id", verifyToken, unblockContact);
 router.post("/report", verifyToken, createReport);
+
+// Public & Self Profile endpoints
+router.get("/profile", verifyToken, getSelfProfile);
+router.get("/me", verifyToken, getSelfProfile);
+router.get("/profile/:id", verifyToken, getPublicUserProfile);
+router.get("/public/:id", verifyToken, getPublicUserProfile);
 
 // get user by id
 router.get("/:userId", verifyToken, getUserById);

@@ -308,24 +308,15 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
         });
       }
 
-      case "host": {
-        const host = await User.findOne({ userId })
-          .select("userId name email phoneNumber gender role bio image audio coins diamonds isBlocked emailVerified phoneVerified language frameId isUserName userName isActive level faceVerificationStatus kycVerificationStatus profileCompleted welcomeRewardClaimed referralClaimed referralCode")
-          .lean();
-        if (host && host.level === undefined) host.level = 6;
-        return sendResponse(res, 200, true, "User fetched successfully", { user: host });
-      }
-
-      case "user": {
+      case "host":
+      case "user":
+      default: {
         const user = await User.findOne({ userId })
-          .select("userId name email gender phoneNumber role bio image coins diamonds isBlocked emailVerified phoneVerified language isUserName userName isActive level faceVerificationStatus kycVerificationStatus profileCompleted welcomeRewardClaimed referralClaimed referralCode")
+          .select("userId meethiId name email gender phoneNumber role bio image audio coins diamonds beans isBlocked emailVerified phoneVerified language frameId isUserName userName isActive level isOnline isVIP vipTier vipExpiresAt svipTier svipExpiresAt equippedFrame equippedMicWave faceVerificationStatus kycVerificationStatus profileCompleted welcomeRewardClaimed referralClaimed referralCode fansCount followersCount followingCount visitorsCount badges")
           .lean();
-        if (user && user.level === undefined) user.level = 6;
-        return sendResponse(res, 200, true, "User fetched successfully", { user });
+        if (!user) return sendResponse(res, 404, false, "User not found");
+        return sendResponse(res, 200, true, "User fetched successfully", { user, data: user, coins: user.coins, diamonds: user.diamonds, beans: user.beans });
       }
-
-      default:
-        return sendResponse(res, 403, false, "Access Denied");
     }
   } catch (error: any) {
     await Logger("getUsers", error);
@@ -372,7 +363,7 @@ export const getUserById = async (req: AuthRequest, res: Response) => {
 
       case "user":
       case "host":
-        return sendResponse(res, 403, false, "Access Denied - Users cannot fetch details");
+        return getPublicUserProfile(req, res);
 
       default:
         return sendResponse(res, 403, false, "Access Denied");
@@ -917,10 +908,7 @@ export const getAdminHostUsers = async (req: AuthRequest, res: Response) => {
       let giftDiamondsEarned = 0;
 
       for (const stat of coinStats) {
-        if (stat._id === "voice_call") {
-          callCoinsReceived = stat.totalCoinsReceived || 0;
-          callDiamondsEarned = stat.totalDiamondEarned || 0;
-        } else if (stat._id === "gift" || stat._id === "gift_sent") {
+        if (stat._id === "gift" || stat._id === "gift_sent") {
           giftCoinsReceived += stat.totalCoinsReceived || 0;
           giftDiamondsEarned += stat.totalDiamondEarned || 0;
         }
@@ -1056,9 +1044,7 @@ export const getCoinHistory = async (req: AuthRequest, res: Response) => {
       const isEarning = isHost || (tx.type as string) === "recharge";
 
       let displayType = tx.type as string;
-      if (tx.type === TransactionType.VOICE_CALL) {
-        displayType = isHost ? "call_earning" : "call";
-      } else if (tx.type === TransactionType.GIFT || tx.type === TransactionType.GIFT_SENT) {
+      if (tx.type === TransactionType.GIFT || tx.type === TransactionType.GIFT_SENT) {
         displayType = isHost ? "gift_received" : "gift_sent";
       }
 
@@ -1323,68 +1309,6 @@ export const getBlockedContacts = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// ðŸ”„ Exchange Coins to Diamonds
-const EXCHANGE_PACKAGES: Record<number, number> = {
-  1000: 900,
-  2000: 1800,
-  5000: 4500,
-  10000: 9000,
-  20000: 18000,
-  50000: 45000,
-  100000: 90000,
-  200000: 180000,
-  500000: 450000
-};
-
-export const exchangeCoinsToDiamonds = async (req: AuthRequest, res: Response) => {
-  try {
-
-    console.log("===== EXCHANGE REQUEST =====");
-    console.log("req.user =", req.user);
-    console.log("req.body =", req.body);
-
-
-    const { userId } = req.user || {};
-    const { coins } = req.body;
-
-    if (!userId) return sendResponse(res, 401, false, "Unauthorized");
-
-    const coinsNum = Number(coins);
-    if (isNaN(coinsNum) || coinsNum <= 0) {
-      return sendResponse(res, 400, false, "Invalid coins amount");
-    }
-
-    const diamondYield = EXCHANGE_PACKAGES[coinsNum];
-    if (!diamondYield) {
-      return sendResponse(res, 400, false, "Invalid exchange package");
-    }
-
-    const updatedUser = await User.findOneAndUpdate(
-      { userId, isDeleted: false, coins: { $gte: coinsNum } },
-      {
-        $inc: {
-          coins: -coinsNum,
-          diamonds: diamondYield
-        }
-      },
-      { new: true }
-    );
-
-    if (!updatedUser) {
-      const exists = await User.exists({ userId, isDeleted: false });
-      return sendResponse(res, exists ? 400 : 404, false, exists ? "Insufficient coins balance" : "User not found");
-    }
-
-    return sendResponse(res, 200, true, "Exchange successful", {
-      coins: updatedUser.coins,
-      diamonds: updatedUser.diamonds
-    });
-  } catch (error: any) {
-    console.error("âŒ Exchange coins backend error:", error);
-    return sendResponse(res, 500, false, error.message);
-  }
-};
-
 export const getMyHelpRequests = async (req: AuthRequest, res: Response) => {
   try {
     const { userId } = req.user || {};
@@ -1460,7 +1384,7 @@ export const requestDeletion = async (req: AuthRequest, res: Response) => {
 
     const deletionTimestamp = Date.now();
     const anonymizedPhone = userDoc.phoneNumber ? `deleted_${userDoc._id}_${deletionTimestamp}` : "";
-    const anonymizedEmail = userDoc.email ? `deleted_${userDoc._id}_${deletionTimestamp}@deleted.yaroapp.in` : "";
+    const anonymizedEmail = userDoc.email ? `deleted_${userDoc._id}_${deletionTimestamp}@deleted.darkmoon.app` : "";
 
     // 1. Immediately soft-delete and anonymize personal information
     userDoc.isDeleted = true;
@@ -1506,3 +1430,96 @@ export const requestDeletion = async (req: AuthRequest, res: Response) => {
   }
 };
 
+
+
+/**
+ * Public User Profile - sanitized endpoint for viewing any user or host
+ * Allows users/hosts to view profile without 403 restriction
+ */
+export const getPublicUserProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, userId } = req.params;
+    const target = id || userId;
+    if (!target) {
+      return sendResponse(res, 400, false, "User identifier is required");
+    }
+
+    const isNumeric = /^\d+$/.test(target);
+    let filter: any = { isDeleted: false };
+    if (isNumeric) {
+      filter.$or = [{ userId: Number(target) }, { meethiId: target }];
+    } else if (mongoose.isValidObjectId(target)) {
+      filter.$or = [{ _id: target }, { meethiId: target }];
+    } else {
+      filter.$or = [{ userName: target }, { meethiId: target }];
+    }
+
+    const user = await User.findOne(filter)
+      .select("userId meethiId name userName gender bio image avatar country age level role isOnline isVIP vipTier vipExpiresAt svipTier svipExpiresAt equippedFrame equippedMicWave badges fansCount followingCount visitorsCount createdAt")
+      .lean();
+
+    if (!user) {
+      return sendResponse(res, 404, false, "User not found");
+    }
+
+    const publicProfile = {
+      _id: user._id,
+      id: user._id,
+      userId: user.userId,
+      meethiId: user.meethiId,
+      name: user.name || user.userName || `User #${user.userId}`,
+      userName: user.userName,
+      avatar: user.image || (user as any).avatar || '',
+      image: user.image || (user as any).avatar || '',
+      bio: user.bio || '',
+      gender: user.gender || 'male',
+      country: user.country,
+      age: user.age || 18,
+      level: user.level || 1,
+      role: user.role || 'user',
+      isOnline: Boolean(user.isOnline),
+      isVIP: Boolean((user as any).isVIP),
+      vipTier: (user as any).vipTier || '',
+      vipExpiresAt: (user as any).vipExpiresAt || null,
+      svipTier: (user as any).svipTier || '',
+      svipExpiresAt: (user as any).svipExpiresAt || null,
+      equippedFrame: (user as any).equippedFrame || 'Rose frame',
+      equippedMicWave: (user as any).equippedMicWave || 'Golden Pulse Wave',
+      fansCount: (user as any).fansCount || 0,
+      followingCount: (user as any).followingCount || 0,
+      visitorsCount: (user as any).visitorsCount || 0,
+      badges: (user as any).badges || [],
+      createdAt: user.createdAt,
+    };
+
+    return sendResponse(res, 200, true, "User profile fetched successfully", { user: publicProfile, data: publicProfile });
+  } catch (error: any) {
+    await Logger("getPublicUserProfile", error);
+    return sendResponse(res, 500, false, error.message);
+  }
+};
+
+/**
+ * Self User Profile - returns current authenticated user profile with wallet balances
+ */
+export const getSelfProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.user || {};
+    if (!userId) {
+      return sendResponse(res, 401, false, "Unauthorized");
+    }
+
+    const user = await User.findOne({ userId })
+      .select("userId meethiId name email phoneNumber gender role bio image audio coins diamonds beans isBlocked emailVerified phoneVerified language frameId isUserName userName isActive level isOnline isVIP vipTier vipExpiresAt svipTier svipExpiresAt equippedFrame equippedMicWave faceVerificationStatus kycVerificationStatus profileCompleted welcomeRewardClaimed referralClaimed referralCode fansCount followersCount followingCount visitorsCount badges")
+      .lean();
+
+    if (!user) {
+      return sendResponse(res, 404, false, "User not found");
+    }
+
+    return sendResponse(res, 200, true, "Self profile fetched successfully", { user, data: user, coins: user.coins, diamonds: user.diamonds, beans: user.beans });
+  } catch (error: any) {
+    await Logger("getSelfProfile", error);
+    return sendResponse(res, 500, false, error.message);
+  }
+};

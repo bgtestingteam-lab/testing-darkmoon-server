@@ -199,11 +199,11 @@ export const userRegister = async (req: AuthRequest, res: Response) => {
     let image = "";
     switch (gender) {
       case "male": {
-        image = "https://api.yaroapp.in/uploads/avatars/male_default.webp";
+        image = "https://api.darkmoon.app/uploads/avatars/male_default.webp";
         break;
       }
       case "female": {
-        image = "https://api.yaroapp.in/uploads/avatars/female_default.webp";
+        image = "https://api.darkmoon.app/uploads/avatars/female_default.webp";
         break;
       }
       default: {
@@ -241,6 +241,7 @@ export const userRegister = async (req: AuthRequest, res: Response) => {
     const refreshToken = await generateToken(newUser.userId.toString(), "refresh");
 
     newUser.refreshToken = refreshToken;
+    newUser.activeToken = accessToken;
     await newUser.save();
 
     return sendResponse(res, 201, true, "Registration successful", {
@@ -477,6 +478,7 @@ export const userGoogleAuth = async (req: Request, res: Response) => {
       const accessToken = await generateToken(existingEmailUser.userId.toString(), "access");
       const refreshToken = await generateToken(existingEmailUser.userId.toString(), "refresh");
       existingEmailUser.refreshToken = refreshToken;
+      existingEmailUser.activeToken = accessToken;
       await existingEmailUser.save();
       return sendResponse(res, 200, true, "Google account linked successfully", {
         accessToken,
@@ -505,11 +507,11 @@ export const userGoogleAuth = async (req: Request, res: Response) => {
     let image;
     switch (gender) {
       case "male": {
-        image = "https://api.yaroapp.in/uploads/avatars/male_default.webp";
+        image = "https://api.darkmoon.app/uploads/avatars/male_default.webp";
         break;
       }
       case "female": {
-        image = "https://api.yaroapp.in/uploads/avatars/female_default.webp";
+        image = "https://api.darkmoon.app/uploads/avatars/female_default.webp";
         break;
       }
       default: {
@@ -579,6 +581,8 @@ export const userRefreshToken = async (req: Request, res: Response, next: NextFu
       }
 
       const accessToken = generateToken(decoded.userId, "access");
+      user.activeToken = accessToken;
+      await user.save();
 
       return sendResponse(res, 200, true, "New access token generated", { accessToken });
     });

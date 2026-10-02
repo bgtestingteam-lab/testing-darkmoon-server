@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { RecruitmentApplication, RecruitmentRole, ApplicationStatus } from '../models/recruitmentApplication.model';
 import { User } from '../models/user.model';
 import { Request as RequestModel, RequestStatus } from '../models/request.model';
+import { Agency } from '../models/agency.model';
 import sendResponse from '../utils/reponse';
 import { Logger } from '../utils/logger';
 import { sendRecruitmentWorkflowNotification } from '../services/recruitmentNotification';
@@ -588,4 +589,123 @@ export const addReviewNote = async (req: Request, res: Response) => {
         await Logger('addReviewNote', error);
         return sendResponse(res, 500, false, 'Failed to add review note');
     }
+};
+
+/**
+ * Agency Portal Dashboard
+ * GET /api/recruitment/agency/dashboard
+ */
+export const getAgencyDashboard = async (req: any, res: Response) => {
+  try {
+    const user = req.user;
+    if (!user) return sendResponse(res, 401, false, 'Unauthorized');
+
+    const userId = user._id || user.id;
+
+    // Check if user is an agency or agency owner or admin
+    const agencyRecord = await Agency.findOne({ ownerId: userId }).lean();
+    const agencyUser = await User.findById(userId).lean();
+
+    const isAgency = agencyUser?.role === 'agency' || Boolean(agencyRecord) || ['owner', 'operator', 'superAdmin', 'admin'].includes(agencyUser?.role || '');
+
+    if (!isAgency) {
+      return sendResponse(res, 403, false, 'Access denied. You do not have an active agency account.');
+    }
+
+    const agencyCode = agencyRecord?.code || agencyUser?.specialCode || agencyUser?.referralCode || String(agencyUser?.userId || '2036');
+    const agencyName = agencyRecord?.name || agencyUser?.name || 'Official Agency';
+
+    // Strictly find hosts assigned to this agency
+    const agencyFilterConditions: any[] = [];
+    if (agencyRecord?._id) {
+      agencyFilterConditions.push({ agencyId: agencyRecord._id });
+    }
+    if (agencyUser?._id) {
+      agencyFilterConditions.push({ agencyId: agencyUser._id }, { parentId: agencyUser._id });
+    }
+
+    const hostQuery: any = {
+      isDeleted: false,
+      role: 'host',
+      $or: agencyFilterConditions.length > 0 ? agencyFilterConditions : [{ _id: null }],
+    };
+
+    const hosts = await User.find(hostQuery)
+      .select('userId name image avatar gender level isOnline coins diamonds createdAt')
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+
+    const totalHosts = hosts.length;
+    const onlineHosts = hosts.filter((h) => h.isOnline).length;
+    const commissionPercent = (agencyRecord?.commissionRate || 10) / 100;
+    const monthlyCommission = Math.floor(hosts.reduce((acc, h) => acc + (h.diamonds || 0), 0) * commissionPercent);
+
+    const formattedHosts = hosts.map((h: any) => ({
+      userId: String(h.userId),
+      name: h.name || `Host #${h.userId}`,
+      avatar: h.image || h.avatar || '/uploads/avatars/female_default.webp',
+      isOnline: Boolean(h.isOnline),
+      level: h.level || 1,
+      totalEarned: h.diamonds || 0,
+      joinedAt: h.createdAt,
+    }));
+
+    return sendResponse(res, 200, true, 'Agency dashboard data fetched successfully', {
+      agencyName,
+      agencyCode,
+      totalHosts,
+      onlineHosts,
+      monthlyCommission,
+      hosts: formattedHosts,
+    });
+  } catch (error: any) {
+    await Logger('getAgencyDashboard', error);
+    return sendResponse(res, 500, false, error.message);
+  }
+};
+
+/**
+ * Join an Agency
+ * POST /api/recruitment/agency/join
+ */
+export const joinAgency = async (req: any, res: Response) => {
+  try {
+    const user = req.user;
+    const { agencyCode, phone, whatsapp, country } = req.body;
+
+    if (!agencyCode) {
+      return sendResponse(res, 400, false, 'agencyCode is required');
+    }
+
+    // Check agency exists
+    const agency = await User.findOne({
+      $or: [
+        { specialCode: agencyCode },
+        { referralCode: agencyCode },
+        { userId: Number(agencyCode) || -1 },
+      ],
+    });
+
+    const applicationId = generateApplicationId('agency-join');
+
+    await RecruitmentApplication.create({
+      applicationId,
+      fullName: user?.name || 'Applicant',
+      phoneNumber: phone || user?.phoneNumber || '',
+      role: 'host',
+      referralCode: agencyCode,
+      parentEntityId: agency?._id,
+      notes: `WhatsApp: ${whatsapp || 'N/A'}, Country: ${country || 'N/A'}`,
+      status: 'pending',
+    });
+
+    return sendResponse(res, 200, true, 'Agency application submitted successfully! Our agency manager will review within 24 hours.', {
+      applicationId,
+      agencyName: agency?.name || 'Official Agency',
+    });
+  } catch (error: any) {
+    await Logger('joinAgency', error);
+    return sendResponse(res, 500, false, error.message);
+  }
 };

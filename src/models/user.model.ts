@@ -13,6 +13,22 @@ const DeviceSchema = new Schema(
   { _id: false }
 );
 
+const StoreInventoryItemSchema = new Schema(
+  {
+    itemId: { type: Schema.Types.ObjectId, ref: 'StoreItem' },
+    name: { type: String, required: true },
+    category: { type: String, required: true },
+    durationDays: { type: Number },
+    purchasedAt: { type: Date, default: Date.now },
+    expiresAt: { type: Date },
+    imageUrl: { type: String, default: '' },
+    animationUrl: { type: String, default: '' },
+    source: { type: String, enum: ['store', 'level'], default: 'store' },
+    grantKey: { type: String, default: '' },
+  },
+  { _id: true }
+);
+
 const userSchema = new Schema<UserInterface>(
   {
     userId: { type: Number, required: true, unique: true },
@@ -35,6 +51,7 @@ const userSchema = new Schema<UserInterface>(
     authType: { type: String, enum: Object.values(AuthType), default: AuthType.PHONE },
     coins: { type: Number, default: 0 },
     diamonds: { type: Number, default: 0 },
+    beans: { type: Number, default: 0 },
     image: { type: String, default: "" },
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
     isDeleted: { type: Boolean, default: false },
@@ -146,8 +163,21 @@ const userSchema = new Schema<UserInterface>(
       index: true,
     },
     moderationLastViolationAt: { type: Date },
+    storeInventory: { type: [StoreInventoryItemSchema], default: [] },
+    levelRewardClaims: { type: [String], default: [], select: false },
     lastLoginIp: { type: String, default: "" },
     deviceId: { type: String, default: "" },
+    equippedFrame: { type: String, default: 'Rose frame' },
+    equippedMicWave: { type: String, default: 'Golden Pulse Wave' },
+    isVIP: { type: Boolean, default: false },
+    vipTier: { type: String, default: '' },
+    vipExpiresAt: { type: Date },
+    svipTier: { type: String, default: '' },
+    svipExpiresAt: { type: Date },
+    fansCount: { type: Number, default: 0 },
+    followingCount: { type: Number, default: 0 },
+    visitorsCount: { type: Number, default: 0 },
+    badges: { type: [String], default: [] },
   },
   {
     timestamps: true,

@@ -13,7 +13,7 @@ import mongoose, { ClientSession } from "mongoose";
 import { getProductConfig, GOOGLE_PLAY_PRODUCTS } from "../constants/googlePlayProducts";
 
 // Package Name Configuration & RTDN Security Secret
-const GOOGLE_PLAY_PACKAGE_NAME = process.env.GOOGLE_PLAY_PACKAGE_NAME || "yaro.vc.app";
+const GOOGLE_PLAY_PACKAGE_NAME = process.env.GOOGLE_PLAY_PACKAGE_NAME || "com.darkmoon.app";
 const GOOGLE_PLAY_RTDN_SECRET = process.env.GOOGLE_PLAY_RTDN_SECRET || "";
 
 /**
@@ -240,10 +240,7 @@ export const verifyGooglePurchase = async (req: AuthRequest, res: Response) => {
   try {
     const { userId } = req.user || {};
     const { purchaseToken, productId, packageName } = req.body;
-    if (packageName && packageName !== GOOGLE_PLAY_PACKAGE_NAME) {
-      console.warn(`[GOOGLE-VERIFY] Warning: client sent package name '${packageName}', enforcing configured '${GOOGLE_PLAY_PACKAGE_NAME}'`);
-    }
-    const effectivePackageName = GOOGLE_PLAY_PACKAGE_NAME;
+    const effectivePackageName = packageName || process.env.GOOGLE_PLAY_PACKAGE_NAME || "com.darkmoon.app";
     const maskedToken = purchaseToken ? purchaseToken.substring(0, 8) + "..." + purchaseToken.slice(-6) : "N/A";
 
     console.log(`[GOOGLE-VERIFY] REQUEST RECEIVED`);

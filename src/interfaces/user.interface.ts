@@ -19,6 +19,7 @@ export interface UserInterface extends Document {
   authType?: AuthType;
   coins?: number;
   diamonds?: number;
+  beans?: number;
   image?: string;
   createdBy?: Types.ObjectId;
   isDeleted?: boolean;
@@ -128,4 +129,28 @@ export interface UserInterface extends Document {
   moderationLastViolationAt?: Date;
   lastLoginIp?: string;
   deviceId?: string;
+  storeInventory?: Array<{
+    itemId?: Types.ObjectId;
+    name: string;
+    category: string;
+    durationDays?: number;
+    purchasedAt: Date;
+    expiresAt?: Date;
+    imageUrl?: string;
+    animationUrl?: string;
+    source?: 'store' | 'level';
+    grantKey?: string;
+  }>;
+  levelRewardClaims?: string[];
+  equippedFrame?: string;
+  equippedMicWave?: string;
+  isVIP?: boolean;
+  vipTier?: string;
+  vipExpiresAt?: Date;
+  svipTier?: string;
+  svipExpiresAt?: Date;
+  fansCount?: number;
+  followingCount?: number;
+  visitorsCount?: number;
+  badges?: string[];
 }

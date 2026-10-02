@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from "express";
+﻿import { NextFunction, Request, Response } from "express";
 import sendResponse from "../utils/reponse";
 // import { deleteFromS3, uploadToS3 } from "../utils/uploadS3";
 import { AuthRequest } from "../middlewares/authorize.middleware";
@@ -215,7 +215,7 @@ export const sendFormForHost = async (req: AuthRequest, res: Response) => {
                 expiresIn: "7d",
             });
 
-            const baseOrigin = config.ORIGIN1 || config.ORIGIN || 'https://admin.yaroapp.in';
+            const baseOrigin = config.ORIGIN1 || config.ORIGIN || 'https://admin.darkmoon.app';
             formURL = `${baseOrigin}/api/form/host-form?token=${token}`;
             emailType = "hostApproved";
         } else {

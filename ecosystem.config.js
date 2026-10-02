@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'yaro-backend-cluster',
+      name: 'darkmoon-backend-cluster',
       script: './dist/index.js',
       instances: 'max',
       exec_mode: 'cluster',

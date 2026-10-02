@@ -1,4 +1,4 @@
-import { Response } from 'express';
+﻿import { Response } from 'express';
 import { AuthRequest } from '../middlewares/authorize.middleware';
 import { User } from '../models/user.model';
 import { Referral } from '../models/referral.model';
@@ -359,7 +359,7 @@ export const getReferralDetails = async (req: AuthRequest, res: Response) => {
       };
     });
 
-    const referralLink = `https://yaroapp.in/refer/${user.referralCode}`;
+    const referralLink = `https://darkmoon.app/refer/${user.referralCode}`;
 
     return sendResponse(res, 200, true, "Referral details fetched successfully", {
       referralCode: user.referralCode,

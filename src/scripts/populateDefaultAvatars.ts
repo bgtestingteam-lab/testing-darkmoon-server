@@ -1,4 +1,4 @@
-import { connectDB } from "../utils/db";
+﻿import { connectDB } from "../utils/db";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import path from "path";
@@ -6,9 +6,9 @@ import { User } from "../models/user.model";
 
 dotenv.config({ path: path.join(__dirname, "../../.env") });
 
-export const DEFAULT_FEMALE_AVATAR_URL = "https://api.yaroapp.in/uploads/avatars/female_default.webp";
-export const DEFAULT_MALE_AVATAR_URL = "https://api.yaroapp.in/uploads/avatars/male_default.webp";
-export const DEFAULT_NEUTRAL_AVATAR_URL = "https://api.yaroapp.in/uploads/avatars/neutral_default.webp";
+export const DEFAULT_FEMALE_AVATAR_URL = "https://api.darkmoon.app/uploads/avatars/female_default.webp";
+export const DEFAULT_MALE_AVATAR_URL = "https://api.darkmoon.app/uploads/avatars/male_default.webp";
+export const DEFAULT_NEUTRAL_AVATAR_URL = "https://api.darkmoon.app/uploads/avatars/neutral_default.webp";
 
 export function isValidAvatarUrl(url: any): boolean {
   if (!url || typeof url !== 'string') return false;

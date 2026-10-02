@@ -112,11 +112,12 @@ export const registerVoiceRoomHandlers = (io: Server, socket: AuthenticatedSocke
       const rawRoomId = String(data?.roomId || "").trim();
       if (!rawRoomId) return;
       const roomId = normalizeRoomId(rawRoomId);
+      const authorizedHost = Boolean(data.isHost && user?.userId && normalizeRoomId(String(user.userId)) === roomId);
 
       const userData = {
-        userId: String(data?.user?.userId || data?.user?.id || user?.userId || user?.id || "guest"),
-        name: String(data?.user?.name || user?.name || "Guest"),
-        avatar: String(data?.user?.avatar || data?.user?.image || "https://api.yaroapp.in/uploads/avatars/female_default.webp"),
+        userId: String(user?.userId || "guest"),
+        name: String(user?.name || "Guest"),
+        avatar: String(data?.user?.avatar || data?.user?.image || "https://api.darkmoon.app/uploads/avatars/female_default.webp"),
         gender: data?.user?.gender || "male",
         level: data?.user?.level || 1,
       };
@@ -131,15 +132,16 @@ export const registerVoiceRoomHandlers = (io: Server, socket: AuthenticatedSocke
       (socket as any).voiceRawRoomId = rawRoomId;
       (socket as any).voiceUser = userData;
 
-      const state = await getVoiceRoomState(roomId, data.customSeats || 8, data.isHost ? userData : null);
+      const state = await getVoiceRoomState(roomId, data.customSeats || 8, authorizedHost ? userData : null);
 
       if (data.roomTitle) state.title = data.roomTitle;
-      if (data.isHost && (!state.seats[0].user || state.seats[0].user.userId === userData.userId)) {
+      if (authorizedHost) {
         state.seats[0].user = userData;
         state.hostUser = userData;
       }
 
       if (!state.onlineUsers) state.onlineUsers = {};
+      const wasOnline = Boolean(state.onlineUsers[userData.userId]);
       state.onlineUsers[userData.userId] = {
         ...userData,
         socketId: socket.id,
@@ -159,23 +161,19 @@ export const registerVoiceRoomHandlers = (io: Server, socket: AuthenticatedSocke
       });
 
       // Broadcast user join to all sockets in the channel
-      io.to(socketRoomChannel).emit("voice_room:user_joined", {
-        user: userData,
-        onlineCount: Object.keys(state.onlineUsers).length,
-      });
-      if (rawRoomId !== roomId) {
-        io.to(`voice_room_channel:${rawRoomId}`).emit("voice_room:user_joined", {
+      if (!wasOnline) {
+        io.to(socketRoomChannel).emit("voice_room:user_joined", {
           user: userData,
           onlineCount: Object.keys(state.onlineUsers).length,
+          announcementSent: true,
+        });
+        io.to(socketRoomChannel).emit("voice_room:chat_message", {
+          id: "sys-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4),
+          type: "system",
+          text: `${userData.name} joined the party!`,
+          timestamp: Date.now(),
         });
       }
-
-      io.to(socketRoomChannel).emit("voice_room:chat_message", {
-        id: "sys-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4),
-        type: "system",
-        text: `📢 ${userData.name} joined the party!`,
-        timestamp: Date.now(),
-      });
 
       console.log(`[VoiceRoom] User ${userData.name} (${userData.userId}) joined room ${roomId}`);
     } catch (err: any) {
@@ -193,9 +191,9 @@ export const registerVoiceRoomHandlers = (io: Server, socket: AuthenticatedSocke
       const roomId = normalizeRoomId(rawRoomId);
 
       const userData = {
-        userId: String(data?.user?.userId || data?.user?.id || user?.userId || user?.id || "guest"),
-        name: String(data?.user?.name || user?.name || "Guest"),
-        avatar: String(data?.user?.avatar || data?.user?.image || "https://api.yaroapp.in/uploads/avatars/female_default.webp"),
+        userId: String(user?.userId || "guest"),
+        name: String(user?.name || "Guest"),
+        avatar: String(data?.user?.avatar || data?.user?.image || "https://api.darkmoon.app/uploads/avatars/female_default.webp"),
         gender: data?.user?.gender || "male",
         level: data?.user?.level || 1,
       };
@@ -207,6 +205,10 @@ export const registerVoiceRoomHandlers = (io: Server, socket: AuthenticatedSocke
 
       if (seatIndex >= state.seats.length) {
         socket.emit("voice_room:error", { message: "Invalid seat number" });
+        return;
+      }
+      if (seatIndex === 0 && normalizeRoomId(String(user?.userId || '')) !== roomId) {
+        socket.emit("voice_room:error", { message: "Only the room host can use the host seat" });
         return;
       }
 
@@ -270,7 +272,7 @@ export const registerVoiceRoomHandlers = (io: Server, socket: AuthenticatedSocke
       if (!rawRoomId) return;
       const roomId = normalizeRoomId(rawRoomId);
 
-      const targetUserId = String(data?.user?.userId || data?.user?.id || user?.userId || user?.id || "");
+      const targetUserId = String(user?.userId || "");
       const socketRoomChannel = `voice_room_channel:${roomId}`;
       const state = await getVoiceRoomState(roomId);
 
@@ -279,8 +281,7 @@ export const registerVoiceRoomHandlers = (io: Server, socket: AuthenticatedSocke
 
       state.seats = state.seats.map((s) => {
         if (
-          (data.seatIndex !== undefined && s.seatIndex === Number(data.seatIndex)) ||
-          (targetUserId && s.user && String(s.user.userId) === String(targetUserId))
+          targetUserId && s.user && String(s.user.userId) === targetUserId
         ) {
           vacatedIndex = s.seatIndex;
           if (s.user?.name) userName = s.user.name;
@@ -432,6 +433,23 @@ export const registerVoiceRoomHandlers = (io: Server, socket: AuthenticatedSocke
     }
   });
 
+  // 7b. Subscribe to Gift Events for Room
+  socket.on("voice_room:subscribe_gifts", async (data: { roomId: string }) => {
+    try {
+      const rawRoomId = String(data?.roomId || (socket as any).voiceRawRoomId || (socket as any).voiceRoomId || "").trim();
+      if (!rawRoomId) return;
+      const roomId = normalizeRoomId(rawRoomId);
+      await socket.join(`voice_room_channel:${roomId}`);
+      await socket.join(`room:${roomId}`);
+      if (rawRoomId !== roomId) {
+        await socket.join(`voice_room_channel:${rawRoomId}`);
+        await socket.join(`room:${rawRoomId}`);
+      }
+    } catch (err: any) {
+      console.warn("[VoiceRoom] subscribe_gifts error:", err);
+    }
+  });
+
   // 8. Send Reaction
   socket.on("voice_room:reaction", async (data: { roomId: string; emoji: string; user?: string }) => {
     try {
@@ -471,27 +489,27 @@ export const registerVoiceRoomHandlers = (io: Server, socket: AuthenticatedSocke
       delete (socket as any).voiceUser;
 
       const state = await getVoiceRoomState(roomId);
+      if (state.onlineUsers?.[userData.userId]?.socketId !== socket.id) return;
       if (state.onlineUsers) {
         delete state.onlineUsers[userData.userId];
       }
 
       let freedIndex = -1;
-      // Only clear seat if the user explicitly clicked "Leave Room"
-      if (isExplicitLeave) {
-        state.seats = state.seats.map((s) => {
-          if (s.seatIndex > 0 && s.user && String(s.user.userId) === String(userData.userId)) {
-            freedIndex = s.seatIndex;
-            return { ...s, user: null, isMuted: true };
-          }
-          return s;
-        });
-      }
+      // Presence and seat occupation must reflect the same live connection.
+      state.seats = state.seats.map((s) => {
+        if (s.user && String(s.user.userId) === String(userData.userId)) {
+          freedIndex = s.seatIndex;
+          return { ...s, user: null, isMuted: true };
+        }
+        return s;
+      });
 
       await saveVoiceRoomState(state);
 
       const userLeftPayload = {
         user: userData,
         onlineCount: Object.keys(state.onlineUsers || {}).length,
+        announcementSent: isExplicitLeave,
         freedSeatIndex: freedIndex,
         seats: state.seats,
       };

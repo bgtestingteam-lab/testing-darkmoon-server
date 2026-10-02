@@ -163,12 +163,9 @@ export const getDashboardStats = async (
         // Pending Reports Count
         const reportsPending = await Report.countDocuments({ status: 'pending' }).catch(() => 0);
 
-        // Active Calls Count
-        const activeCalls = await CoinsTransaction.countDocuments({
-            ...hostFilter,
-            status: { $in: [CallStatus.ACCEPTED, CallStatus.CONNECTED, CallStatus.CONNECTING] },
-            type: TransactionType.VOICE_CALL,
-        }).catch(() => 0);
+        // Active Voice Rooms Count
+        const { Room } = await import('../models/room.model');
+        const activeCalls = await Room.countDocuments({ isActive: true }).catch(() => 0);
 
         // Base match for transactions + host filter
         const txMatch = { ...hostFilter };
@@ -188,31 +185,8 @@ export const getDashboardStats = async (
         const uniqueCallersToday = uniqueCallersTodayList.length;
         const uniqueHostsActiveToday = uniqueHostsTodayList.length;
 
-        // Call stats for today
-        const callsToday = await CoinsTransaction.countDocuments({
-            ...txMatch,
-            type: TransactionType.VOICE_CALL,
-            createdAt: { $gte: todayStart },
-        });
-
-        const callAggregation = await CoinsTransaction.aggregate([
-            {
-                $match: {
-                    ...txMatch,
-                    type: TransactionType.VOICE_CALL,
-                    status: CallStatus.ENDED,
-                    createdAt: { $gte: todayStart },
-                },
-            },
-            {
-                $group: {
-                    _id: null,
-                    totalSeconds: { $sum: '$duration' },
-                    totalCoins: { $sum: '$coinsSpent' },
-                    totalHostEarnings: { $sum: '$hostEarning' },
-                },
-            },
-        ]);
+        const callsToday = 0;
+        const callAggregation = [{ totalSeconds: 0, totalCoins: 0, totalHostEarnings: 0 }];
 
         const minutesToday = Math.round((callAggregation[0]?.totalSeconds || 0) / 60);
         const coinsSpentToday = callAggregation[0]?.totalCoins || 0;
@@ -422,35 +396,10 @@ export const getCallTrends = async (
             durationMap[d] = 0;
         }
 
-        const callTrends = await CoinsTransaction.aggregate([
-            {
-                $match: {
-                    ...hostFilter,
-                    type: TransactionType.VOICE_CALL,
-                    createdAt: { $gte: startDate },
-                },
-            },
-            {
-                $group: {
-                    _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-                    calls: { $sum: 1 },
-                    duration: { $sum: '$duration' },
-                },
-            },
-            { $sort: { _id: 1 } },
-        ]);
-
-        callTrends.forEach(item => {
-            if (item._id && callsMap[item._id] !== undefined) {
-                callsMap[item._id] = item.calls || 0;
-                durationMap[item._id] = Math.round((item.duration || 0) / 60);
-            }
-        });
-
         const formattedData = Object.keys(callsMap).map(date => ({
             date,
-            calls: callsMap[date],
-            duration: durationMap[date],
+            calls: 0,
+            duration: 0,
         }));
 
         return sendResponse(res, 200, true, 'Call trends fetched successfully', formattedData);
@@ -485,15 +434,14 @@ export const getCoinDistribution = async (
         ]);
 
         let formattedData = distribution.map((item) => ({
-            type: item._id || 'VOICE_CALL',
+            type: item._id || 'GIFT',
             total: item.total || 0,
             count: item.count || 0,
         }));
 
         if (formattedData.length === 0) {
             formattedData = [
-                { type: 'VOICE_CALL', total: 0, count: 0 },
-                { type: 'VIDEO_CALL', total: 0, count: 0 },
+                { type: 'GIFT', total: 0, count: 0 },
             ];
         }
 

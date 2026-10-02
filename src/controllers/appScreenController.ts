@@ -184,50 +184,6 @@ export default function EarningScreen() {
 }`,
   },
   {
-    screenCode: "ExchangeCoins",
-    screenName: "Exchange Coins for Diamonds",
-    screenCategory: "Finance",
-    filePath: "src/screens/user/ExchangeCoins.js",
-    description: "Coin to diamond currency converter and exchange portal.",
-    allowScreenshot: false,
-    allowScreenRecording: false,
-    flagSecureEnabled: true,
-    codeSnippet: `// src/screens/user/ExchangeCoins.js
-import React, { useEffect } from 'react';
-import { View } from 'react-native';
-import { applyScreenSecurity } from '../../services/SecurityService';
-
-export default function ExchangeCoinsScreen() {
-  useEffect(() => {
-    applyScreenSecurity('ExchangeCoins');
-  }, []);
-
-  return <View style={{ flex: 1 }} />;
-}`,
-  },
-  {
-    screenCode: "ExchangeHistory",
-    screenName: "Coin Exchange History Log",
-    screenCategory: "Finance",
-    filePath: "src/screens/user/ExchangeHistory.js",
-    description: "Log of past coin-to-diamond currency conversions.",
-    allowScreenshot: false,
-    allowScreenRecording: false,
-    flagSecureEnabled: true,
-    codeSnippet: `// src/screens/user/ExchangeHistory.js
-import React, { useEffect } from 'react';
-import { View } from 'react-native';
-import { applyScreenSecurity } from '../../services/SecurityService';
-
-export default function ExchangeHistoryScreen() {
-  useEffect(() => {
-    applyScreenSecurity('ExchangeHistory');
-  }, []);
-
-  return <View style={{ flex: 1 }} />;
-}`,
-  },
-  {
     screenCode: "CoinHistory",
     screenName: "Coin Spending & Received Log",
     screenCategory: "Finance",

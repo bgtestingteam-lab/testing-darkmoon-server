@@ -115,9 +115,6 @@ router.patch('/hosts/block/:id', verifyToken, blockHost);
 import { triggerWeeklyLevelRecalculation } from '../controllers/managementController';
 router.post('/hosts/recalculate-levels', verifyToken, triggerWeeklyLevelRecalculation);
 
-// ============ Call Management Routes ============
-import { getAllCallHistory } from '../controllers/callController';
-router.get('/calls/history', verifyToken, getAllCallHistory);
 
 // ============ System Settings Routes ============
 import { getSettings, updateSettings } from '../controllers/settingsController';
@@ -473,12 +470,7 @@ import {
     runReconciliation,
     adjustWalletBalance
 } from '../controllers/financeCommandController';
-import {
-    getActiveCallsWithTelemetry,
-    forceTerminateCall,
-    getCallDiagnostics,
-    recordCallTelemetry
-} from '../controllers/callTelemetryController';
+
 import {
     getActiveRoomsAdmin,
     emergencyCloseRoom
@@ -514,11 +506,7 @@ router.get('/finance/reconciliation-status', verifyToken, requireRoles('owner', 
 router.post('/finance/run-reconciliation', verifyToken, requireRoles('owner', 'superAdmin'), runReconciliation);
 router.post('/wallet/adjust', verifyToken, requireRoles('owner', 'superAdmin', 'admin'), adjustWalletBalance);
 
-// Live Operations
-router.get('/calls/active', verifyToken, requireRoles('owner', 'superAdmin', 'admin', 'operator', 'customerSupport'), getActiveCallsWithTelemetry);
-router.post('/calls/:id/terminate', verifyToken, requireRoles('owner', 'superAdmin', 'admin', 'operator', 'customerSupport'), forceTerminateCall);
-router.get('/calls/:id/diagnostics', verifyToken, requireRoles('owner', 'superAdmin', 'admin', 'operator'), getCallDiagnostics);
-router.post('/calls/telemetry', recordCallTelemetry);
+
 
 router.get('/rooms/active', verifyToken, requireRoles('owner', 'superAdmin', 'admin', 'operator', 'customerSupport'), getActiveRoomsAdmin);
 router.post('/rooms/:id/close', verifyToken, requireRoles('owner', 'superAdmin', 'admin', 'operator', 'customerSupport'), emergencyCloseRoom);

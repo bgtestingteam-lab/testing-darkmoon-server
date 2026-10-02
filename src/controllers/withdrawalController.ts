@@ -7,6 +7,8 @@ import { User } from "../models/user.model";
 import { VerificationSettings } from "../models/verification.model";
 import { Logger } from "../utils/logger";
 import mongoose from "mongoose";
+import { CoinsTransaction } from "../models/spentCoinModel";
+import { CallStatus, TransactionType } from "../constants/user";
 import { createNotification } from "./notificationController";
 import {
     MIN_WITHDRAWAL_COINS,
@@ -77,7 +79,7 @@ export const requestWithdrawal = async (req: AuthRequest, res: Response) => {
         await user.save({ session });
 
         // 4. Create Request
-        await Withdrawal.create([{
+        const [newWithdrawal] = await Withdrawal.create([{
             userId,
             amount: netAmount,
             grossAmount,
@@ -87,6 +89,22 @@ export const requestWithdrawal = async (req: AuthRequest, res: Response) => {
             method,
             details,
             status: WithdrawalStatus.PENDING
+        }], { session });
+
+        // Record in ledger
+        await CoinsTransaction.create([{
+            userId: user._id,
+            hostId: user._id,
+            type: TransactionType.WITHDRAWAL,
+            coinsSpent: coinsRequired,
+            status: CallStatus.INITIATED,
+            meta: {
+                withdrawalId: newWithdrawal._id,
+                amountInr: netAmount,
+                grossAmountInr: grossAmount,
+                platformFeeInr: platformFee,
+                method,
+            }
         }], { session });
 
         await session.commitTransaction();
@@ -201,14 +219,44 @@ export const processWithdrawal = async (req: AuthRequest, res: Response) => {
         if (status === WithdrawalStatus.REJECTED) {
             // Refund coins
             withdrawal.rejectionReason = rejectionReason || "Rejected by admin";
-            await User.findOneAndUpdate(
+            const refundedUser = await User.findOneAndUpdate(
                 { userId: withdrawal.userId },
                 { $inc: { coins: withdrawal.coinsDeducted } },
-                { session }
+                { session, new: true }
             );
+
+            if (refundedUser) {
+                await CoinsTransaction.create([{
+                    userId: refundedUser._id,
+                    hostId: refundedUser._id,
+                    type: TransactionType.WITHDRAWAL_REFUND,
+                    coinsSpent: -withdrawal.coinsDeducted,
+                    hostEarning: withdrawal.coinsDeducted,
+                    status: CallStatus.ENDED,
+                    meta: {
+                        withdrawalId: withdrawal._id,
+                        reason: withdrawal.rejectionReason,
+                    }
+                }], { session });
+            }
         } else {
             // Approved
             withdrawal.transactionId = transactionId; // Admin enters bank ref ID
+            const hostUser = await User.findOne({ userId: withdrawal.userId }).session(session);
+            if (hostUser) {
+                await CoinsTransaction.create([{
+                    userId: hostUser._id,
+                    hostId: hostUser._id,
+                    type: TransactionType.WITHDRAWAL,
+                    coinsSpent: withdrawal.coinsDeducted,
+                    status: CallStatus.ENDED,
+                    meta: {
+                        withdrawalId: withdrawal._id,
+                        bankTransactionId: transactionId,
+                        amountInr: withdrawal.amount,
+                    }
+                }], { session });
+            }
         }
 
         await withdrawal.save({ session });

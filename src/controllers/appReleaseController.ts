@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+﻿import { Request, Response } from "express";
 import path from "path";
 import fs from "fs";
 import { AppRelease } from "../models/appRelease.model";
@@ -119,7 +119,7 @@ export const getLatestRelease = async (_req: Request, res: Response) => {
       });
     }
 
-    const host = process.env.BASE_URL || "https://api.yaroapp.in/api";
+    const host = process.env.BASE_URL || "https://api.darkmoon.app/api";
     const fullDownloadUrl = `${host.replace(/\/api$/, "")}/api/v1/app-releases/download`;
 
     return res.status(200).json({
@@ -214,7 +214,7 @@ export const downloadLatestRelease = async (_req: Request, res: Response) => {
     }
 
     // Final fallback: redirect to website static release build
-    return res.redirect("https://yaroapp.in/app-release.apk");
+    return res.redirect("https://darkmoon.app/app-release.apk");
   } catch (error: any) {
     console.error("[AppRelease] downloadLatestRelease error:", error);
     return sendResponse(res, 500, false, "Download failed due to server error.");

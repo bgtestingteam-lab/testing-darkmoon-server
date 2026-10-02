@@ -45,6 +45,13 @@ export enum TransactionType {
   VOICE_CALL = 'voice_call',
   GIFT = 'gift',
   GIFT_SENT = 'gift_sent',
+  STORE_PURCHASE = 'store_purchase',
+  VIP_PURCHASE = 'vip_purchase',
+  SVIP_PURCHASE = 'svip_purchase',
+  FANCLUB_JOIN = 'fanclub_join',
+  TASK_REWARD = 'task_reward',
+  WITHDRAWAL = 'withdrawal',
+  WITHDRAWAL_REFUND = 'withdrawal_refund',
 }
 
 export enum CallStatus {

@@ -30,11 +30,19 @@ const googleClientIds = buildGoogleClientIdAllowlist(
     ...YARO_GOOGLE_WEB_CLIENT_IDS
 );
 
+const isProduction = process.env.NODE_ENV === 'production';
+const jwtAccessSecret = process.env.JWT_SECRET || process.env.JWT_ACCESS_SECRET || (!isProduction ? '2a869de490ac2e6f065b63be7c76ffd658af4fbb4feaf3c1ced1cd3959c9cfe2' : '');
+const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET || (!isProduction ? '812ade37d6ecfebbde7de546b9603c45a9ebb2ef174554f72a7e6d6c3d079f6a' : '');
+
+if (isProduction && (!jwtAccessSecret || !jwtRefreshSecret)) {
+    throw new Error('FATAL: JWT_SECRET (or JWT_ACCESS_SECRET) and JWT_REFRESH_SECRET must be configured in production environment variables.');
+}
+
 export const config = {
     PORT: process.env.PORT || 3101,
     MONGODB_URI: process.env.MONGODB_URI,
-    JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || '2a869de490ac2e6f065b63be7c76ffd658af4fbb4feaf3c1ced1cd3959c9cfe2',
-    JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || '812ade37d6ecfebbde7de546b9603c45a9ebb2ef174554f72a7e6d6c3d079f6a',
+    JWT_ACCESS_SECRET: jwtAccessSecret,
+    JWT_REFRESH_SECRET: jwtRefreshSecret,
     ENCRYPTION_SECRET_KEY: process.env.ENCRYPTION_SECRET_KEY,
     SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL,
     EMAIL_USER: process.env.EMAIL_USER,

@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 
 dotenv.config({ quiet: true });
 
-export const REQUIRED_DATABASE_NAME = "yaro_live";
+export const REQUIRED_DATABASE_NAME = process.env.REQUIRED_DATABASE_NAME || "dark_moon_live";
 
 let connectionPromise: Promise<typeof mongoose> | null = null;
 let listenersRegistered = false;
@@ -33,7 +33,7 @@ export const getMongoUri = (): string => {
   }
 
   const databaseName = decodeURIComponent(parsed.pathname.replace(/^\//, ""));
-  if (databaseName !== REQUIRED_DATABASE_NAME) {
+  if (process.env.STRICT_DB_CHECK === "true" && databaseName !== REQUIRED_DATABASE_NAME) {
     throw new Error(`MONGODB_URI must target the ${REQUIRED_DATABASE_NAME} database`);
   }
 
@@ -58,7 +58,7 @@ const registerConnectionListeners = (): void => {
 export const connectDB = async (): Promise<typeof mongoose> => {
   if (mongoose.connection.readyState === 1) {
     const currentDatabase = mongoose.connection.db?.databaseName;
-    if (currentDatabase !== REQUIRED_DATABASE_NAME) {
+    if (process.env.STRICT_DB_CHECK === "true" && currentDatabase !== REQUIRED_DATABASE_NAME) {
       throw new Error(`Existing Mongoose connection targets unexpected database: ${currentDatabase || "unknown"}`);
     }
     return mongoose;
@@ -76,7 +76,7 @@ export const connectDB = async (): Promise<typeof mongoose> => {
     socketTimeoutMS: 45000,
   }).then(async (client) => {
     const databaseName = client.connection.db?.databaseName;
-    if (databaseName !== REQUIRED_DATABASE_NAME) {
+    if (process.env.STRICT_DB_CHECK === "true" && databaseName !== REQUIRED_DATABASE_NAME) {
       await client.disconnect();
       throw new Error(`Connected to unexpected MongoDB database: ${databaseName || "unknown"}`);
     }

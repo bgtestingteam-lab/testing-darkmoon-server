@@ -361,8 +361,8 @@ export const muteUserInRoom = async (req: Request, res: Response, next: NextFunc
 
 const BANNER_INTERNAL_SCREENS = new Set([
     'Wallet', 'Recharge', 'Level', 'Frame', 'Withdrawal', 'Kyc', 'VerificationHub',
-    'HelpAndSupport', 'Notifications', 'SystemMessage', 'CallHistory', 'Earning',
-    'ExchangeCoins', 'HostApply', 'Setting', 'Profile',
+    'HelpAndSupport', 'Notifications', 'SystemMessage', 'Earning',
+    'HostApply', 'Setting', 'Profile',
 ]);
 
 // ==================== BANNERS MANAGEMENT ====================

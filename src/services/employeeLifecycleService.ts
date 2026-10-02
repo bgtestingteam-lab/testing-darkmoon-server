@@ -1,4 +1,4 @@
-import { User } from '../models/user.model';
+﻿import { User } from '../models/user.model';
 import { Employee } from '../models/employee.model';
 import { RecruitmentApplication } from '../models/recruitmentApplication.model';
 import { generateSecureHash } from '../utils/passwordHelper';
@@ -52,7 +52,7 @@ export async function automateEmployeeCreationOnApproval(applicationId: string) 
                 designation: `${app.role.toUpperCase()} Lead`,
                 status: 'active_employee',
                 joiningDate: new Date(),
-                offerLetterUrl: `https://api.yaroapp.in/policies/offer-${app.applicationId}.pdf`
+                offerLetterUrl: `https://api.darkmoon.app/policies/offer-${app.applicationId}.pdf`
             });
         }
 

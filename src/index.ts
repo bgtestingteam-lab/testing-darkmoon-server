@@ -11,7 +11,9 @@ import { disconnectDB, sanitizeMongoError } from "./utils/db";
 import { initializeDatabase } from "./utils/initializeDatabase";
 import { config } from "./configs/envConfig";
 import { checkPortAvailable } from "./utils/getAvailablePort";
-import { AuthRoutes, avatarRoute, callRoutes, chatRoutes, coinsPriceRoutes, frameRoute, hostRoutes, UserRoutes, adminRoutes, paymentRoutes, kycRoutes, withdrawalRoutes, giftRoutes, helpRoutes, UploadRoutes, notificationRoutes, upiRoutes, publicRoutes, emsRoutes, recruitmentRoutes, sellerRoutes, voiceClubRoutes, storeRoutes } from "./routes";
+import { AuthRoutes, avatarRoute, chatRoutes, coinsPriceRoutes, frameRoute, hostRoutes, UserRoutes, adminRoutes, paymentRoutes, kycRoutes, withdrawalRoutes, giftRoutes, helpRoutes, UploadRoutes, notificationRoutes, upiRoutes, publicRoutes, emsRoutes, recruitmentRoutes, sellerRoutes, voiceClubRoutes, storeRoutes, vipRoutes, fanClubRoutes, rankingRoutes, userTaskRoutes } from "./routes";
+import { subscribeSvip } from "./controllers/vipController";
+import { getSupporters } from "./controllers/rankingController";
 import { approveStockRequest, rejectStockRequest, getAllStockRequestsAdmin, updateSellerPricingConfig, verifySellerForAdmin, adminCreditSellerDiamonds } from "./controllers/sellerAdminController";
 import chatSocket from "./sockets";
 import path from "path";
@@ -20,6 +22,8 @@ import "./utils/pushNotification";
 import { verifyToken } from "./middlewares/authorize.middleware";
 import { getSystemMessages } from "./controllers/notificationController";
 import verificationRoutes from "./routes/verificationRoutes";
+import { giftRouter, adminGiftRouter } from "./gift/gift.routes";
+import { GiftService } from "./gift/gift.service";
 import adminVerificationRoutes from "./routes/adminVerificationRoutes";
 
 const app: Application = express();
@@ -29,7 +33,7 @@ app.disable("x-powered-by");
 
 // 4. CORS Configuration - Restrict origins
 const allowedOrigins = [
-  process.env.CORS_ORIGIN || 'https://yaroapp.in',
+  process.env.CORS_ORIGIN || 'https://darkmoon.app',
   'http://localhost:3100',
   'http://localhost:3101',
   'http://localhost:3102',
@@ -40,31 +44,40 @@ const allowedOrigins = [
   'http://localhost:5174',
   'http://localhost:5050',
 
+  // Dark Moon Domains
+  'https://darkmoon.app',
+  'https://www.darkmoon.app',
+  'https://api.darkmoon.app',
+  'https://admin.darkmoon.app',
+  'http://admin.darkmoon.app',
+  'https://management.darkmoon.app',
+  'http://management.darkmoon.app',
+  'https://agency.darkmoon.app',
+  'https://operator.darkmoon.app',
+  'https://host.darkmoon.app',
+  'https://apply.darkmoon.app',
+  'https://support.darkmoon.app',
+  'https://superadmin.darkmoon.app',
+
+  // Legacy fallback origins
   'https://yaroapp.in',
   'https://www.yaroapp.in',
   'https://api.yaroapp.in',
-
   'https://admin.yaroapp.in',
   'http://admin.yaroapp.in',
-
   'https://agency.yaroapp.in',
   'https://operator.yaroapp.in',
   'https://host.yaroapp.in',
   'https://adminjoin.yaroapp.in',
   'https://support.yaroapp.in',
   'https://superadmin.yaroapp.in',
-
   'https://management.yaroapp.in',
   'http://management.yaroapp.in',
-
-  // Production Domains (meethi.live)
   'https://meethi.live',
   'https://www.meethi.live',
   'https://admin.meethi.live',
   'https://management.meethi.live',
   'https://api.meethi.live',
-  'http://admin.meethi.live',
-  'http://management.meethi.live',
 ].filter(Boolean);
 
 const isOriginAllowed = (origin?: string): boolean => {
@@ -78,6 +91,8 @@ const isOriginAllowed = (origin?: string): boolean => {
     }
     // Allow production domains and subdomains
     if (
+      url.hostname === 'darkmoon.app' ||
+      url.hostname.endsWith('.darkmoon.app') ||
       url.hostname === 'yaroapp.in' ||
       url.hostname.endsWith('.yaroapp.in') ||
       url.hostname === 'meethi.live' ||
@@ -138,7 +153,7 @@ app.get('/.well-known/assetlinks.json', (_req, res) => {
       relation: ["delegate_permission/common.handle_all_urls"],
       target: {
         namespace: "android_app",
-        package_name: "yaro.vc.app",
+        package_name: "com.darkmoon.app",
         sha256_cert_fingerprints: [
           "13:F2:6D:95:D3:11:B7:1C:2B:C3:0A:A6:B9:7B:0C:23:86:9B:48:B2:2B:F3:44:AB:2E:F9:04:BA:B5:D3:29:C4",
           "AE:60:BA:0C:7C:19:F6:91:22:66:2C:26:EF:0D:FF:CF:5D:E6:B3:DD:71:72:04:AD:04:AD:87:9D:07:8A:A3:1E"
@@ -160,7 +175,6 @@ app.use("/api/v1/auth", AuthRoutes);
 app.use("/api/host", hostRoutes);
 app.use("/api/v1/host", hostRoutes);
 app.use("/api/coinsPrice", coinsPriceRoutes);
-app.use("/api/call", callRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/frames", frameRoute);
 app.use("/api/avatar", avatarRoute);
@@ -170,7 +184,9 @@ app.use("/api/ems", emsRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/kyc", kycRoutes);
 app.use("/api/withdrawal", withdrawalRoutes);
-app.use("/api/gift", giftRoutes);
+app.use("/api/gifts", giftRouter);
+app.use("/api/gift", giftRouter);
+app.use("/api/admin/gifts", adminGiftRouter);
 app.use("/api/help", helpRoutes);
 app.use("/api/upload", UploadRoutes);
 app.use("/api/notifications", notificationRoutes);
@@ -187,6 +203,18 @@ app.use("/api/v1/verifications", verificationRoutes);
 app.use("/api/store", storeRoutes);
 app.use("/api/v1/store", storeRoutes);
 app.use("/api/user/buy-store-item", storeRoutes);
+app.use("/api/vip", vipRoutes);
+app.use("/api/v1/vip", vipRoutes);
+app.use("/api/svip", vipRoutes);
+app.use("/api/v1/svip", vipRoutes);
+app.post("/api/svip/subscribe", verifyToken, subscribeSvip);
+app.use("/api/fanclub", fanClubRoutes);
+app.use("/api/v1/fanclub", fanClubRoutes);
+app.use("/api/ranking", rankingRoutes);
+app.use("/api/v1/ranking", rankingRoutes);
+app.use("/api/tasks", userTaskRoutes);
+app.use("/api/v1/user-tasks", userTaskRoutes);
+app.get("/api/user/supporters", getSupporters);
 app.use("/api/v1/admin/verifications", adminVerificationRoutes);
 app.get("/api/admin/sellers/stock-requests", verifyToken, getAllStockRequestsAdmin);
 app.post("/api/admin/sellers/stock-requests/:id/approve", verifyToken, approveStockRequest);
@@ -259,12 +287,14 @@ app.get("/api/v1/analytics/ai-insights", async (_req, res) => {
 });
 app.get("/api/system-messages", verifyToken, getSystemMessages);
 
+import appExtraFeaturesRoutes from "./routes/appExtraFeaturesRoutes";
+app.use("/api", appExtraFeaturesRoutes);
+app.use("/api/v1", appExtraFeaturesRoutes);
+
 // Enterprise Feature Flag Client Evaluation & Telemetry Ingestion
 import { evaluateClientFlags } from "./controllers/featureFlagController";
-import { recordCallTelemetry } from "./controllers/callTelemetryController";
 app.post("/api/v1/config/flags/evaluate", evaluateClientFlags);
 app.get("/api/v1/config/flags", evaluateClientFlags);
-app.post("/api/call/telemetry", recordCallTelemetry);
 
 // Root Route
 app.get("/", (req, res) => {
