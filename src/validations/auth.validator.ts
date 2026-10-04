@@ -21,9 +21,8 @@ export const validationResetPassword = [
     .isLength({ min: 6 })
     .withMessage("Password must be at least 6 characters long"),
 
-    body("firebaseIdToken")
-      .notEmpty()
-      .withMessage("Firebase phone verification is required"),
+  body("firebaseIdToken")
+    .optional(),
 ];
 
 export const validationUserCreate = [
@@ -39,15 +38,13 @@ export const validationUserCreate = [
     .isLength({ min: 6 })
     .withMessage("Password must be at least 6 characters long"),
 
-    body("firebaseIdToken")
-      .notEmpty()
-      .withMessage("Firebase phone verification is required"),
+  body("firebaseIdToken")
+    .optional(),
 
   body("age")
-    .notEmpty()
-    .withMessage("Age is required to register")
+    .optional()
     .isInt({ min: 18, max: 120 })
-    .withMessage("You must be at least 18 years old to register on Dark Moon"),
+    .withMessage("You must be at least 18 years old to register"),
 ];
 
 export const validationUserLogin = [

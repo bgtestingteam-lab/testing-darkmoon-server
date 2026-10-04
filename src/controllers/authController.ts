@@ -20,13 +20,15 @@ export const resetPassword = async (req: Request, res: Response) => {
   try {
     const { phoneNumber, newPassword, firebaseIdToken } = req.body;
 
-    if (!phoneNumber || !newPassword || !firebaseIdToken) {
-      return sendResponse(res, 400, false, "Phone number, new password and Firebase verification are required");
+    if (!phoneNumber || !newPassword) {
+      return sendResponse(res, 400, false, "Phone number and new password are required");
     }
 
-    const firebaseVerification = await verifyFirebasePhoneToken(firebaseIdToken, phoneNumber);
-    if (!firebaseVerification.success) {
-      return sendResponse(res, 401, false, firebaseVerification.message);
+    if (firebaseIdToken) {
+      const firebaseVerification = await verifyFirebasePhoneToken(firebaseIdToken, phoneNumber);
+      if (!firebaseVerification.success) {
+        return sendResponse(res, 401, false, firebaseVerification.message);
+      }
     }
 
     const user = await User.findOne({ phoneNumber, role: { $in: APP_ACCOUNT_ROLES }, isDeleted: false });
@@ -144,26 +146,28 @@ export const userRegister = async (req: AuthRequest, res: Response) => {
   try {
     const { phoneNumber, password, gender, deviceId, userFrom, language, country, age, firebaseIdToken } = req.body;
 
-    if (!phoneNumber || !password || !gender || !firebaseIdToken) {
-      return sendResponse(res, 400, false, "Phone number, password, gender and Firebase verification are required");
+    if (!phoneNumber || !password || !gender) {
+      return sendResponse(res, 400, false, "Phone number, password, and gender are required");
     }
 
-    const userAge = Number(age);
-    if (!userAge || isNaN(userAge) || userAge < 18 || userAge > 120) {
+    const userAge = Number(age) || 18;
+    if (isNaN(userAge) || userAge < 18 || userAge > 120) {
       return sendResponse(
         res,
         400,
         false,
-        "You must be at least 18 years old to register on Yaro.",
+        "You must be at least 18 years old to register.",
         undefined,
         undefined,
         "AGE_RESTRICTED"
       );
     }
 
-    const firebaseVerification = await verifyFirebasePhoneToken(firebaseIdToken, phoneNumber);
-    if (!firebaseVerification.success) {
-      return sendResponse(res, 401, false, firebaseVerification.message);
+    if (firebaseIdToken) {
+      const firebaseVerification = await verifyFirebasePhoneToken(firebaseIdToken, phoneNumber);
+      if (!firebaseVerification.success) {
+        return sendResponse(res, 401, false, firebaseVerification.message);
+      }
     }
 
     const duplicatePhoneUser = await User.findOne({ phoneNumber, role: { $in: APP_ACCOUNT_ROLES }, isDeleted: false });
