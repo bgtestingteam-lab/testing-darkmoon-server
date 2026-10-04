@@ -27,10 +27,12 @@ export const validationResetPassword = [
 
 export const validationUserCreate = [
   body("phoneNumber")
-    .notEmpty()
-    .withMessage("Phone number is required")
-    .isMobilePhone("any")
-    .withMessage("Invalid phone number format"),
+    .optional()
+    .isString(),
+
+  body("email")
+    .optional()
+    .isString(),
 
   body("password")
     .notEmpty()
@@ -42,9 +44,7 @@ export const validationUserCreate = [
     .optional(),
 
   body("age")
-    .optional()
-    .isInt({ min: 18, max: 120 })
-    .withMessage("You must be at least 18 years old to register"),
+    .optional(),
 ];
 
 export const validationUserLogin = [

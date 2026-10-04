@@ -1517,6 +1517,14 @@ export const getSelfProfile = async (req: AuthRequest, res: Response) => {
       return sendResponse(res, 404, false, "User not found");
     }
 
+    if (!user.name) {
+      user.name = `User_${user.userId}`;
+    }
+    if (!user.image) {
+      user.image = "https://api.darkmoon.app/uploads/avatars/male_default.webp";
+    }
+    (user as any).avatar = user.image;
+
     return sendResponse(res, 200, true, "Self profile fetched successfully", { user, data: user, coins: user.coins, diamonds: user.diamonds, beans: user.beans });
   } catch (error: any) {
     await Logger("getSelfProfile", error);

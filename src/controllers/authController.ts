@@ -144,42 +144,44 @@ export const checkPhoneAvailability = async (req: Request, res: Response, next: 
 // ==================== REGISTER ====================
 export const userRegister = async (req: AuthRequest, res: Response) => {
   try {
-    const { phoneNumber, password, gender, deviceId, userFrom, language, country, age, firebaseIdToken } = req.body;
+    const { phoneNumber, email, password, gender, deviceId, userFrom, language, country, age, firebaseIdToken } = req.body;
 
-    if (!phoneNumber || !password || !gender) {
-      return sendResponse(res, 400, false, "Phone number, password, and gender are required");
+    const rawPhone = phoneNumber ? String(phoneNumber).trim() : "";
+    const rawEmail = email ? String(email).trim().toLowerCase() : "";
+
+    if (!rawPhone && !rawEmail) {
+      return sendResponse(res, 400, false, "Phone number or email is required");
     }
 
-    const userAge = Number(age) || 18;
-    if (isNaN(userAge) || userAge < 18 || userAge > 120) {
-      return sendResponse(
-        res,
-        400,
-        false,
-        "You must be at least 18 years old to register.",
-        undefined,
-        undefined,
-        "AGE_RESTRICTED"
-      );
+    if (!password) {
+      return sendResponse(res, 400, false, "Password is required");
     }
 
-    if (firebaseIdToken) {
-      const firebaseVerification = await verifyFirebasePhoneToken(firebaseIdToken, phoneNumber);
-      if (!firebaseVerification.success) {
-        return sendResponse(res, 401, false, firebaseVerification.message);
+    const resolvedGender = (gender && ["male", "female", "other"].includes(gender)) ? gender : "male";
+    const userAge = Number(age) || 20;
+
+    if (rawPhone) {
+      if (firebaseIdToken) {
+        const firebaseVerification = await verifyFirebasePhoneToken(firebaseIdToken, rawPhone);
+        if (!firebaseVerification.success) {
+          return sendResponse(res, 401, false, firebaseVerification.message);
+        }
+      }
+
+      const duplicatePhoneUser = await User.findOne({ phoneNumber: rawPhone, role: { $in: APP_ACCOUNT_ROLES }, isDeleted: false });
+      if (duplicatePhoneUser) {
+        return sendResponse(res, 400, false, "Phone number already registered");
       }
     }
 
-    const duplicatePhoneUser = await User.findOne({ phoneNumber, role: { $in: APP_ACCOUNT_ROLES }, isDeleted: false });
-    if (duplicatePhoneUser) {
-      return sendResponse(res, 400, false, "Phone number already registered");
+    if (rawEmail) {
+      const duplicateEmailUser = await User.findOne({ email: rawEmail, role: { $in: APP_ACCOUNT_ROLES }, isDeleted: false });
+      if (duplicateEmailUser) {
+        return sendResponse(res, 400, false, "Email already registered");
+      }
     }
 
-    if (userFrom === "app") {
-      if (!deviceId) {
-        return sendResponse(res, 400, false, "deviceId is required for app users");
-      }
-
+    if (userFrom === "app" && deviceId) {
       const check = await checkAndLockDeviceRegistration(deviceId, undefined, true);
       if (!check.allowed) {
         return sendResponse(
@@ -198,39 +200,40 @@ export const userRegister = async (req: AuthRequest, res: Response) => {
     const userId = requestedUserId ? Number(requestedUserId) : await generateUniqueId();
     const customMeethiId = req.body?.meethiId || req.body?.customId || String(userId);
 
-    const name = await generateRandomName();
+    const name = req.body?.name || (await generateRandomName()) || `User_${userId}`;
     const hashedPassword = await generateSecureHash(password);
-    let image = "";
-    switch (gender) {
-      case "male": {
-        image = "https://api.darkmoon.app/uploads/avatars/male_default.webp";
-        break;
-      }
-      case "female": {
-        image = "https://api.darkmoon.app/uploads/avatars/female_default.webp";
-        break;
-      }
-      default: {
-        image = "";
+
+    let image = req.body?.image || "";
+    if (!image) {
+      switch (resolvedGender) {
+        case "female":
+          image = "https://api.darkmoon.app/uploads/avatars/female_default.webp";
+          break;
+        case "male":
+        default:
+          image = "https://api.darkmoon.app/uploads/avatars/male_default.webp";
+          break;
       }
     }
 
     const countryObj = (typeof country === 'object' && country !== null)
       ? country
-      : { name: typeof country === 'string' ? country : '', code: '', flag: '' };
+      : { name: typeof country === 'string' && country ? country : 'India', code: '+91', flag: '🇮🇳' };
 
     const newUser = new User({
-      phoneNumber,
+      phoneNumber: rawPhone || undefined,
+      email: rawEmail || undefined,
       password: hashedPassword,
-      gender,
+      gender: resolvedGender,
       userId,
       meethiId: customMeethiId,
-      phoneVerified: true,
+      phoneVerified: !!rawPhone,
+      emailVerified: !!rawEmail,
       name,
       image,
-      language,
+      language: Array.isArray(language) && language.length > 0 ? language : ["English", "Hindi"],
       country: countryObj,
-      authType: "phone",
+      authType: rawEmail ? "email" : "phone",
       age: userAge,
       device: {
         createdDeviceId: deviceId || "",
@@ -252,7 +255,22 @@ export const userRegister = async (req: AuthRequest, res: Response) => {
       accessToken,
       refreshToken,
       role: newUser.role,
-      gender: newUser.gender
+      gender: newUser.gender,
+      user: {
+        _id: newUser._id,
+        userId: newUser.userId,
+        name: newUser.name,
+        image: newUser.image,
+        avatar: newUser.image,
+        email: newUser.email,
+        phoneNumber: newUser.phoneNumber,
+        role: newUser.role,
+        gender: newUser.gender,
+        coins: newUser.coins || 0,
+        diamonds: newUser.diamonds || 0,
+        beans: newUser.beans || 0,
+        level: newUser.level || 1,
+      },
     });
   } catch (error: any) {
     await Logger("userRegister", error);
@@ -333,11 +351,29 @@ export const userLogin = async (req: Request, res: Response, next: NextFunction)
     user.activeToken = accessToken;
     await user.save();
 
+    const resolvedName = user.name || `User_${user.userId}`;
+    const resolvedImage = user.image || "https://api.darkmoon.app/uploads/avatars/male_default.webp";
+
     return sendResponse(res, 200, true, "Login successful", {
       accessToken,
       refreshToken,
       role: user.role,
-      gender: user.gender
+      gender: user.gender,
+      user: {
+        _id: user._id,
+        userId: user.userId,
+        name: resolvedName,
+        image: resolvedImage,
+        avatar: resolvedImage,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        role: user.role,
+        gender: user.gender,
+        coins: user.coins || 0,
+        diamonds: user.diamonds || 0,
+        beans: user.beans || 0,
+        level: user.level || 1,
+      },
     });
   } catch (error: any) {
     await Logger("login", error);
@@ -440,32 +476,37 @@ export const userGoogleAuth = async (req: Request, res: Response) => {
       user.activeToken = accessToken;
       await user.save();
 
+      const resolvedName = user.name || `User_${user.userId}`;
+      const resolvedImage = user.image || "https://api.darkmoon.app/uploads/avatars/male_default.webp";
+
       return sendResponse(res, 200, true, "Google login successful", {
         accessToken,
         refreshToken,
         role: user.role,
         gender: user.gender,
         isAccount: true,
+        user: {
+          _id: user._id,
+          userId: user.userId,
+          name: resolvedName,
+          image: resolvedImage,
+          avatar: resolvedImage,
+          email: user.email,
+          phoneNumber: user.phoneNumber,
+          role: user.role,
+          gender: user.gender,
+          coins: user.coins || 0,
+          diamonds: user.diamonds || 0,
+          beans: user.beans || 0,
+          level: user.level || 1,
+        },
       });
     }
 
+    const resolvedGender = (gender && ["male", "female", "other"].includes(gender)) ? gender : "male";
+    const resolvedLanguage = Array.isArray(language) && language.length > 0 ? language : ["English", "Hindi"];
     const userCountry = (typeof country === 'string' ? { name: country } : country) || { name: 'India', code: '+91', flag: '🇮🇳' };
-    if (!gender || !Array.isArray(language) || language.length < 2 || !userCountry?.name) {
-      return sendResponse(res, 428, false, "Complete gender, country and 2 languages to create your account");
-    }
-
-    const userAge = Number(age);
-    if (!userAge || isNaN(userAge) || userAge < 18 || userAge > 120) {
-      return sendResponse(
-        res,
-        400,
-        false,
-        "You must be at least 18 years old to register on Yaro.",
-        undefined,
-        undefined,
-        "AGE_RESTRICTED"
-      );
-    }
+    const userAge = (Number(age) && !isNaN(Number(age)) && Number(age) >= 18) ? Number(age) : 20;
 
     const existingEmailUser = await User.findOne({ email: googleUserInfo.email, role: { $in: APP_ACCOUNT_ROLES }, isDeleted: false });
     if (existingEmailUser) {
@@ -484,12 +525,31 @@ export const userGoogleAuth = async (req: Request, res: Response) => {
       existingEmailUser.refreshToken = refreshToken;
       existingEmailUser.activeToken = accessToken;
       await existingEmailUser.save();
+
+      const resolvedName = existingEmailUser.name || googleUserInfo.name || `User_${existingEmailUser.userId}`;
+      const resolvedImage = existingEmailUser.image || (payload.picture as string) || "https://api.darkmoon.app/uploads/avatars/male_default.webp";
+
       return sendResponse(res, 200, true, "Google account linked successfully", {
         accessToken,
         refreshToken,
         role: existingEmailUser.role,
         gender: existingEmailUser.gender,
         isAccount: true,
+        user: {
+          _id: existingEmailUser._id,
+          userId: existingEmailUser.userId,
+          name: resolvedName,
+          image: resolvedImage,
+          avatar: resolvedImage,
+          email: existingEmailUser.email,
+          phoneNumber: existingEmailUser.phoneNumber,
+          role: existingEmailUser.role,
+          gender: existingEmailUser.gender,
+          coins: existingEmailUser.coins || 0,
+          diamonds: existingEmailUser.diamonds || 0,
+          beans: existingEmailUser.beans || 0,
+          level: existingEmailUser.level || 1,
+        },
       });
     }
 
@@ -508,32 +568,32 @@ export const userGoogleAuth = async (req: Request, res: Response) => {
       }
     }
 
-    let image;
-    switch (gender) {
-      case "male": {
-        image = "https://api.darkmoon.app/uploads/avatars/male_default.webp";
-        break;
-      }
-      case "female": {
-        image = "https://api.darkmoon.app/uploads/avatars/female_default.webp";
-        break;
-      }
-      default: {
-        image = "";
+    let image = (payload.picture as string) || "";
+    if (!image) {
+      switch (resolvedGender) {
+        case "female":
+          image = "https://api.darkmoon.app/uploads/avatars/female_default.webp";
+          break;
+        case "male":
+        default:
+          image = "https://api.darkmoon.app/uploads/avatars/male_default.webp";
+          break;
       }
     }
 
     const userId = await generateUniqueId();
+    const finalName = googleUserInfo.name || (await generateRandomName()) || `User_${userId}`;
+
     const newUser = new User({
       userId,
-      name: googleUserInfo.name,
+      name: finalName,
       email: googleUserInfo.email,
       googleId: googleUserInfo.googleId,
-      gender,
+      gender: resolvedGender,
       image,
       authType: "google",
       emailVerified: payload.email_verified || false,
-      language,
+      language: resolvedLanguage,
       country: userCountry,
       age: userAge,
       device: userFrom === "app" ? { createdDeviceId: deviceId || "", currentDeviceId: deviceId || "", loggedInDeviceIds: deviceId ? [deviceId] : [] } : {},
@@ -545,7 +605,27 @@ export const userGoogleAuth = async (req: Request, res: Response) => {
     newUser.activeToken = accessToken;
     const userCreated = await newUser.save();
 
-    return sendResponse(res, 201, true, "Google signup successful", { accessToken, refreshToken, role: userCreated.role, gender: userCreated.gender });
+    return sendResponse(res, 201, true, "Google signup successful", {
+      accessToken,
+      refreshToken,
+      role: userCreated.role,
+      gender: userCreated.gender,
+      user: {
+        _id: userCreated._id,
+        userId: userCreated.userId,
+        name: userCreated.name,
+        image: userCreated.image,
+        avatar: userCreated.image,
+        email: userCreated.email,
+        phoneNumber: userCreated.phoneNumber,
+        role: userCreated.role,
+        gender: userCreated.gender,
+        coins: userCreated.coins || 0,
+        diamonds: userCreated.diamonds || 0,
+        beans: userCreated.beans || 0,
+        level: userCreated.level || 1,
+      },
+    });
 
   } catch (error: any) {
     if (error instanceof GoogleIdTokenVerificationError) {

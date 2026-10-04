@@ -11,6 +11,7 @@ if (process.env.NODE_ENV !== 'production') {
 // mobile app in the allowlist so a stale process-manager environment cannot make
 // a valid app token fail with "Wrong recipient" after a deployment.
 export const YARO_GOOGLE_WEB_CLIENT_IDS = [
+    "648050345317-t7idbl9hi9kou275jn8np45n2u2fvdt3.apps.googleusercontent.com",
     "775252509237-1us46o9umvvio0ngmbd4n1vhml8bfgdr.apps.googleusercontent.com",
     "775252509237-aeqs5cd5viou7iv4r5chq8k15ccaq7ir.apps.googleusercontent.com",
 ];
