@@ -39,7 +39,7 @@ if (isProduction && (!jwtAccessSecret || !jwtRefreshSecret)) {
 }
 
 export const config = {
-    PORT: process.env.PORT || 3101,
+    PORT: Number(process.env.PORT) || 5000,
     MONGODB_URI: process.env.MONGODB_URI,
     JWT_ACCESS_SECRET: jwtAccessSecret,
     JWT_REFRESH_SECRET: jwtRefreshSecret,

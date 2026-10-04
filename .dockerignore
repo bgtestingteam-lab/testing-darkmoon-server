@@ -1,0 +1,11 @@
+.env
+.env.*
+node_modules
+.git
+npm-debug.log
+logs
+coverage
+*.log
+scratch
+ts_error*.txt
+test_mongo.ts

@@ -1,15 +1,14 @@
 module.exports = {
   apps: [
     {
-      name: 'darkmoon-backend-cluster',
+      name: 'darkmoon-backend',
       script: './dist/index.js',
-      instances: 'max',
-      exec_mode: 'cluster',
+      instances: 1,
+      exec_mode: 'fork',
       watch: false,
-      max_memory_restart: '1G',
+      max_memory_restart: '450M',
       env_production: {
         NODE_ENV: 'production',
-        PORT: 3101,
       },
       kill_timeout: 5000,
       listen_timeout: 5000,

@@ -12,7 +12,8 @@ ENV NODE_ENV=production
 COPY package*.json ./
 RUN npm ci --only=production
 COPY --from=builder /app/dist ./dist
-COPY ecosystem.config.js ./
+COPY --from=builder /app/policies ./policies
+RUN mkdir -p uploads
 
 EXPOSE 5000
-CMD ["npx", "pm2-runtime", "start", "ecosystem.config.js"]
+CMD ["node", "dist/index.js"]

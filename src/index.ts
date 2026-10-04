@@ -347,7 +347,7 @@ const io = new Server(httpServer, {
 chatSocket(io);
 
 const startServer = async (): Promise<void> => {
-  const port = Number(config.PORT || 3101);
+  const port = Number(process.env.PORT) || Number(config.PORT) || 5000;
   const isAvailable = await checkPortAvailable(port);
   if (!isAvailable) {
     throw new Error(`Port ${port} is already in use`);

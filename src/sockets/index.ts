@@ -11,6 +11,9 @@ import { registerVoiceRoomHandlers } from "./voiceRoomSocket";
 // Redis Pub/Sub for Adapter
 const pubClient = redis;
 const subClient = redis.duplicate();
+subClient.on('error', (err) => {
+    console.error('Redis subClient Error:', err);
+});
 
 let ioInstance: Server;
 
