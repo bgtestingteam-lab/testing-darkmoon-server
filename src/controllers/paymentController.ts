@@ -20,15 +20,16 @@ const GOOGLE_PLAY_RTDN_SECRET = process.env.GOOGLE_PLAY_RTDN_SECRET || "";
  * Initialize Google Auth Client securely from Environment Variable or Service Account Key file
  */
 const getGoogleAuth = () => {
-  if (process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON) {
+  const rawGooglePlayAccount = process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON || process.env.GOOGLE_PLAY_SERVICE_ACCOUNT;
+  if (rawGooglePlayAccount) {
     try {
-      const credentials = JSON.parse(process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON);
+      const credentials = JSON.parse(rawGooglePlayAccount);
       return new google.auth.GoogleAuth({
         credentials,
         scopes: ["https://www.googleapis.com/auth/androidpublisher"],
       });
     } catch (err) {
-      console.error("[GooglePlay] Error parsing GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:", err);
+      console.error("[GooglePlay] Error parsing GOOGLE_PLAY_SERVICE_ACCOUNT credentials:", err);
     }
   }
 

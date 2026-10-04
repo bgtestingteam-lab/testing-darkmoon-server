@@ -310,8 +310,8 @@ app.get("/", (req, res) => {
 // Health Route
 app.get("/health", (req, res) => {
   res.status(200).json({
-    success: true,
-    status: "healthy",
+    status: "ok",
+    service: "darkmoon-backend",
     uptime: process.uptime(),
     timestamp: new Date().toISOString()
   });
@@ -397,6 +397,10 @@ const shutdown = async (signal: "SIGINT" | "SIGTERM"): Promise<void> => {
       if (!httpServer.listening) return resolve();
       httpServer.close((error) => error ? reject(error) : resolve());
     });
+    try {
+      const redisModule = await import("./configs/redisConfig");
+      redisModule.default.disconnect();
+    } catch (_) {}
     await disconnectDB();
     process.exit(0);
   } catch (error) {

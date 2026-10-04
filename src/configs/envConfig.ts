@@ -38,6 +38,10 @@ if (isProduction && (!jwtAccessSecret || !jwtRefreshSecret)) {
     throw new Error('FATAL: JWT_SECRET (or JWT_ACCESS_SECRET) and JWT_REFRESH_SECRET must be configured in production environment variables.');
 }
 
+if (isProduction && !process.env.REDIS_URL) {
+    throw new Error('FATAL: REDIS_URL must be configured in production environment variables. Render web service cannot fall back to localhost:6379.');
+}
+
 export const config = {
     PORT: Number(process.env.PORT) || 5000,
     MONGODB_URI: process.env.MONGODB_URI,
@@ -54,7 +58,7 @@ export const config = {
     CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
     CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
     AGORA_APP_ID: process.env.AGORA_APP_ID,
-    AGORA_APP_CERTIFICATE: process.env.APP_CERTIFICATE,
+    AGORA_APP_CERTIFICATE: process.env.AGORA_APP_CERTIFICATE || process.env.APP_CERTIFICATE,
     RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
     RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
     ORIGIN: process.env.ORIGIN,
@@ -62,7 +66,7 @@ export const config = {
     WEB_HOOK_PORT: process.env.WEB_HOOK_PORT || 4000,
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || YARO_GOOGLE_WEB_CLIENT_ID,
     GOOGLE_CLIENT_IDS: googleClientIds,
-    REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
+    REDIS_URL: process.env.REDIS_URL || (!isProduction ? 'redis://localhost:6379' : ''),
     REDIS_PREFIX: process.env.REDIS_PREFIX || 'yaroapp:',
     VERIFICATION_ENCRYPTION_KEY: process.env.VERIFICATION_ENCRYPTION_KEY,
     VERIFICATION_PRIVATE_STORAGE_PATH: process.env.VERIFICATION_PRIVATE_STORAGE_PATH,

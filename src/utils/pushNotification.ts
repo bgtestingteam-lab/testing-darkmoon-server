@@ -19,6 +19,17 @@ if (!admin.apps.length) {
       }
     }
 
+    if (!serviceAccount && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
+      try {
+        serviceAccount = {
+          project_id: process.env.FIREBASE_PROJECT_ID || EXPECTED_FIREBASE_PROJECT_ID,
+          client_email: process.env.FIREBASE_CLIENT_EMAIL.trim(),
+          private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        };
+      } catch (err: any) {
+        console.error('[Firebase] Failed to construct service account from client email and private key:', err?.message || err);
+      }
+    }
     if (!serviceAccount) {
       const candidatePaths = [
         process.env.GOOGLE_APPLICATION_CREDENTIALS,
