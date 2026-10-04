@@ -51,9 +51,8 @@ messageSchema.index({ sender: 1, receiver: 1 }); // Find conversations between u
 messageSchema.index({ receiver: 1, status: 1 }); // Find unseen messages
 
 // Model
-const Message: Model<IMessage> = mongoose.model<IMessage>(
-  "Message",
-  messageSchema
-);
+const Message: Model<IMessage> =
+  (mongoose.models.Message as Model<IMessage>) ||
+  mongoose.model<IMessage>("Message", messageSchema);
 
 export default Message;

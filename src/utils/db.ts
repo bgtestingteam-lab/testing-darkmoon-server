@@ -32,6 +32,16 @@ export const getMongoUri = (): string => {
     throw new Error("MONGODB_URI must use the mongodb:// or mongodb+srv:// protocol");
   }
 
+  if (
+    process.env.NODE_ENV === "production" &&
+    (parsed.hostname === "localhost" ||
+      parsed.hostname === "127.0.0.1" ||
+      parsed.hostname === "::1" ||
+      parsed.hostname === "[::1]")
+  ) {
+    throw new Error("MONGODB_URI cannot point to localhost/127.0.0.1 in production. A production MongoDB instance is required.");
+  }
+
   const databaseName = decodeURIComponent(parsed.pathname.replace(/^\//, ""));
   if (process.env.STRICT_DB_CHECK === "true" && databaseName !== REQUIRED_DATABASE_NAME) {
     throw new Error(`MONGODB_URI must target the ${REQUIRED_DATABASE_NAME} database`);

@@ -24,9 +24,11 @@ conversationSchema.index({ participants: 1 }); // Find conversations by user
 conversationSchema.index({ updatedAt: -1 }); // Sort by recent activity
 
 // Model
-const Conversation: Model<IConversation> = mongoose.model<IConversation>(
-  "Conversation",
-  conversationSchema
-);
+const Conversation: Model<IConversation> =
+  (mongoose.models.Conversation as Model<IConversation>) ||
+  mongoose.model<IConversation>(
+    "Conversation",
+    conversationSchema
+  );
 
 export default Conversation;

@@ -39,8 +39,31 @@ if (isProduction && (!jwtAccessSecret || !jwtRefreshSecret)) {
     throw new Error('FATAL: JWT_SECRET (or JWT_ACCESS_SECRET) and JWT_REFRESH_SECRET must be configured in production environment variables.');
 }
 
-if (isProduction && !process.env.REDIS_URL) {
-    throw new Error('FATAL: REDIS_URL must be configured in production environment variables. Render web service cannot fall back to localhost:6379.');
+if (isProduction) {
+    const redisUrl = (process.env.REDIS_URL || '').trim();
+    if (!redisUrl) {
+        throw new Error('FATAL: REDIS_URL must be configured in production environment variables. Render web service cannot fall back to localhost:6379.');
+    }
+    if (
+        redisUrl.includes('localhost') ||
+        redisUrl.includes('127.0.0.1') ||
+        redisUrl.includes('::1') ||
+        redisUrl.includes('[::1]')
+    ) {
+        throw new Error('FATAL: REDIS_URL cannot point to localhost/127.0.0.1 in production. An external hosted Redis instance is required.');
+    }
+
+    const mongoUri = (process.env.MONGODB_URI || '').trim();
+    if (!mongoUri) {
+        throw new Error('FATAL: MONGODB_URI must be configured in production environment variables. A production MongoDB instance is required.');
+    }
+    if (
+        mongoUri.includes('localhost') ||
+        mongoUri.includes('127.0.0.1') ||
+        mongoUri.includes('::1')
+    ) {
+        throw new Error('FATAL: MONGODB_URI cannot point to localhost/127.0.0.1 in production. A production MongoDB instance is required.');
+    }
 }
 
 export const config = {

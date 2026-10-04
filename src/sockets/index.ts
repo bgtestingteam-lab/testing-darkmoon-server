@@ -189,6 +189,25 @@ const chatSocket = (io: Server) => {
 
 
 
+export const closeSocketServer = async (): Promise<void> => {
+    try {
+        if (ioInstance) {
+            await new Promise<void>((resolve) => {
+                ioInstance.close(() => resolve());
+            });
+        }
+    } catch (err: any) {
+        console.warn('Socket.IO close warning:', err?.message || err);
+    }
+    try {
+        if (subClient && subClient.status !== 'end') {
+            await subClient.quit().catch(() => subClient.disconnect());
+        }
+    } catch (err: any) {
+        console.warn('Redis subClient disconnect warning:', err?.message || err);
+    }
+};
+
 export default chatSocket;
 // Export onlineUsers to keep other files from crashing, but it is empty/useless now.
-export const onlineUsers = {}; 
+export const onlineUsers = {};

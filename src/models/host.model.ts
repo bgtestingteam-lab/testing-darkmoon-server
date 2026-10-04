@@ -1,4 +1,4 @@
-import { Schema, model, Document } from "mongoose";
+import mongoose, { Schema, model, Document, Model } from "mongoose";
 
 // TypeScript interface for Host
 export interface IHost extends Document {
@@ -42,5 +42,5 @@ HostSchema.index({ meethiId: 1 }); // Filter by Admin's ID
 HostSchema.index({ isApproved: 1, isDeleted: 1 }); // Admin queries for active hosts
 
 // Export model
-const Host = model<IHost>("Host", HostSchema);
+const Host = (mongoose.models.Host as Model<IHost>) || model<IHost>("Host", HostSchema);
 export default Host;

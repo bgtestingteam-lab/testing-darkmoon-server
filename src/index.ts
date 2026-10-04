@@ -312,8 +312,8 @@ app.get("/", (req, res) => {
   });
 });
 
-// Health Route
-app.get("/health", (req, res) => {
+// Health Routes
+app.get(["/health", "/api/health"], (_req, res) => {
   res.status(200).json({
     status: "ok",
     service: "darkmoon-backend",
@@ -403,10 +403,15 @@ const shutdown = async (signal: "SIGINT" | "SIGTERM"): Promise<void> => {
       httpServer.close((error) => error ? reject(error) : resolve());
     });
     try {
-      const redisModule = await import("./configs/redisConfig");
-      redisModule.default.disconnect();
+      const { closeSocketServer } = await import("./sockets");
+      await closeSocketServer();
+    } catch (_) {}
+    try {
+      const { disconnectRedis } = await import("./configs/redisConfig");
+      await disconnectRedis();
     } catch (_) {}
     await disconnectDB();
+    console.info("Graceful shutdown completed successfully");
     process.exit(0);
   } catch (error) {
     console.error(`Graceful shutdown failed: ${sanitizeMongoError(error)}`);

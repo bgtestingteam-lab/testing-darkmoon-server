@@ -1,28 +1,41 @@
-import Redis from 'ioredis';
+import Redis, { RedisOptions } from 'ioredis';
 import { config } from './envConfig';
 
 let reconnectAttempts = 0;
+const redisUrl = config.REDIS_URL || 'redis://127.0.0.1:6379';
+const isTls = typeof redisUrl === 'string' && redisUrl.startsWith('rediss://');
 
-const redis = new Redis(config.REDIS_URL, {
+const redisOptions: RedisOptions = {
   keyPrefix: config.REDIS_PREFIX,
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
+  lazyConnect: false,
+  ...(isTls
+    ? {
+        tls: {
+          rejectUnauthorized: process.env.REDIS_TLS_REJECT_UNAUTHORIZED === 'true',
+        },
+      }
+    : {}),
   retryStrategy(times) {
     reconnectAttempts = times;
-    if (times > 10) {
-      console.error(`[Redis] Connection failed after ${times} attempts. Please check REDIS_URL.`);
+    if (times > 20) {
+      console.error(`[Redis] Connection failed after ${times} attempts. Backing off...`);
+      return Math.min(times * 1000, 15000);
     }
     const delay = Math.min(times * 300, 5000);
     return delay;
   },
   reconnectOnError(err) {
     const targetError = 'READONLY';
-    if (err.message.includes(targetError)) {
+    if (err.message && err.message.includes(targetError)) {
       return true;
     }
     return false;
   },
-});
+};
+
+const redis = new Redis(redisUrl, redisOptions);
 
 redis.on('connect', () => {
   reconnectAttempts = 0;
@@ -44,5 +57,15 @@ redis.on('close', () => {
 redis.on('reconnecting', (delay: number) => {
   console.info(`[Redis] Reconnecting in ${delay}ms...`);
 });
+
+export const disconnectRedis = async (): Promise<void> => {
+  try {
+    if (redis && redis.status !== 'end') {
+      await redis.quit().catch(() => redis.disconnect());
+    }
+  } catch (err: any) {
+    console.warn('[Redis] Disconnect notice:', err?.message || err);
+  }
+};
 
 export default redis;

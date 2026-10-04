@@ -224,4 +224,4 @@ userSchema.index(
   }
 );
 
-export const User = mongoose.model<UserInterface>("User", userSchema);
+export const User = (mongoose.models.User as mongoose.Model<UserInterface>) || mongoose.model<UserInterface>("User", userSchema);
