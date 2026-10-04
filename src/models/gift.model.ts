@@ -1,31 +1,12 @@
+import mongoose, { Model } from 'mongoose';
+import { IGift as IEnterpriseGift } from '../gift/gift.types';
+import { Gift as EnterpriseGift, giftSchema } from '../gift/gift.model';
 
-import mongoose, { Schema, Document } from 'mongoose';
+export type IGift = IEnterpriseGift;
 
-export interface IGift extends Document {
-    name: string;
-    icon: string; // URL of the gift icon
-    animationUrl?: string;
-    mediaType?: 'image' | 'gif' | 'webp' | 'svg' | 'svga';
-    cost: number; // Cost in coins
-    category?: string;
-    isActive: boolean;
-}
+export const Gift: Model<IGift> =
+    (mongoose.models.Gift as Model<IGift>) ||
+    EnterpriseGift ||
+    mongoose.model<IGift>('Gift', giftSchema);
 
-const giftSchema = new Schema<IGift>(
-    {
-        name: { type: String, required: true },
-        icon: { type: String, required: true },
-        animationUrl: { type: String, default: '' },
-        mediaType: {
-            type: String,
-            enum: ['image', 'gif', 'webp', 'svg', 'svga'],
-            default: 'image',
-        },
-        cost: { type: Number, required: true },
-        category: { type: String, default: 'Standard' },
-        isActive: { type: Boolean, default: true },
-    },
-    { timestamps: true }
-);
-
-export const Gift = mongoose.model<IGift>('Gift', giftSchema);
+export default Gift;

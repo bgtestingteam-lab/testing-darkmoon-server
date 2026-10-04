@@ -1,11 +1,11 @@
 import dotenv from "dotenv";
 import path from "path";
 
-// Load environment variables reliably regardless of process working directory
-dotenv.config();
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-dotenv.config({ path: path.resolve(__dirname, "../.env") });
-dotenv.config({ path: path.resolve(process.cwd(), ".env") });
+// Load environment variables for local development without noisy logs in production
+if (process.env.NODE_ENV !== 'production') {
+    dotenv.config({ quiet: true });
+    dotenv.config({ path: path.resolve(process.cwd(), ".env"), quiet: true });
+}
 
 // OAuth client IDs are public identifiers. Keep the Web client bundled with the
 // mobile app in the allowlist so a stale process-manager environment cannot make
