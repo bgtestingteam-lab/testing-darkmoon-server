@@ -48,6 +48,19 @@ export const validationUserCreate = [
 ];
 
 export const validationUserLogin = [
+  body("identifier")
+    .optional()
+    .isString()
+    .trim()
+    .notEmpty()
+    .withMessage("Login identifier must be a valid string"),
+
+  body("email")
+    .optional()
+    .isEmail()
+    .normalizeEmail()
+    .withMessage("Invalid email address"),
+
   body("phoneNumber")
     .optional()
     .isString()
@@ -64,6 +77,13 @@ export const validationUserLogin = [
     .withMessage("Password is required")
     .isLength({ min: 6 })
     .withMessage("Password must be at least 6 characters long"),
+
+  body().custom((value) => {
+    if (!value?.identifier && !value?.email && !value?.phoneNumber && !value?.userId) {
+      throw new Error("Email, phone number, or User ID is required");
+    }
+    return true;
+  }),
 ];
 
 export const validationGoogleAuth = [

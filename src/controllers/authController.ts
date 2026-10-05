@@ -281,9 +281,9 @@ export const userRegister = async (req: AuthRequest, res: Response) => {
 // ==================== LOGIN ====================
 export const userLogin = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { phoneNumber, userId, password, deviceId, userFrom } = req.body;
+    const { identifier, email, phoneNumber, userId, password, deviceId, userFrom } = req.body;
 
-    const rawInput = (phoneNumber || userId || "").toString().trim();
+    const rawInput = (identifier || email || phoneNumber || userId || "").toString().trim();
     const cleanDigits = rawInput.replace(/\D/g, "");
     const last10Digits = cleanDigits.length >= 10 ? cleanDigits.slice(-10) : cleanDigits;
 
@@ -305,7 +305,7 @@ export const userLogin = async (req: Request, res: Response, next: NextFunction)
     }
 
     if (findConditions.length === 0) {
-      return sendResponse(res, 400, false, "Phone number or User ID is required.");
+      return sendResponse(res, 400, false, "Email, phone number, or User ID is required.");
     }
 
     const user = await User.findOne({
@@ -664,7 +664,7 @@ export const userRefreshToken = async (req: Request, res: Response, next: NextFu
         return sendResponse(res as any, 404, false, "Account deleted or not found");
       }
 
-      const accessToken = generateToken(decoded.userId, "access");
+      const accessToken = await generateToken(decoded.userId, "access");
       user.activeToken = accessToken;
       await user.save();
 
